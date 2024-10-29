@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  font-family:"Benton Sans",sans-serif;
+  background-color:white;
+  padding:20px;
+  font-size:16px;
+  font-weight:300;
+}
+.slidecontainer {
+  padding-bottom:20px;
+}
+
+.slider {
+  -webkit-appearance: none;
+  width:200px;
+  height: 10px;
+  border-radius:5px;
+  background: #ffca42;
+  outline: none;
+  opacity: 1;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+#frequency{
+  width:100px;
+}
+.slider:hover {
+  opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background:black;
+  cursor: pointer;
+  opacity: 1;
+
+  border-radius:15px;
+}
+
+.slider::-moz-range-thumb {
+  width: 25px;
+  height: 25px;
+  background: #ffca42;
+  cursor: pointer;
+}
+.subtitle{
+  padding:10px;
+}
+#title{
+  font-size:36px;
+  padding:10px;
+}
+p{
+  padding:10px;
+}
+</style>
+</head>
+<body>
+<div id="title">Term length calculator <b>test</b></div>
+
+<div class="slidecontainer">
+  <p>  If justices serve <span id="termValue"></span>
+  <input type="range" value="18" class="slider"> Years</p>
+<p>
+  and are appointed every <span id="appointValue"></span> 
+  <input type="range" value="2" class="slider"> Years
+</p>
+</div>
+<div id="judges" class="subtitle">then 9 Supreme Court seats would be timed like this: </div>
+<div id="chart2"></div>
+<div id="presidents" class="subtitle">an each 4 year presidential term would appoint: </div>
+<div id="chart1"></div>
+
+
+
+
+
+
+</body></html>
