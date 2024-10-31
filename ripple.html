@@ -17,7 +17,7 @@
     var minDate = new Date("October 5, 1789")
     var maxDate = new Date()
     var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,1400])
-    var grid = 100
+    var grid = 80
     var yearlyRadiusOffset = 3
 
     Promise.all([d3.csv("scotus_succession_flip.csv"),d3.csv("scotus_wiki.csv")])
@@ -90,13 +90,14 @@
             })
 
     function drawRipple(seatNumber,wiki,startDate,days,svg,firstLast){
+        var justiceNumber = wiki.number
         var opacity = .1
 
         var years = Math.floor(days/365)
         //var colorScale = d3.scaleLinear().domain([18,30]).range(["black","red"])
        // var color =colorScale(years)
         var color = "black"
-
+    var highlightColor = "red"
         var leftOverDays = days-years*365
         var leftOverPercent = leftOverDays/365
         var leftOverDegrees = leftOverPercent*360
@@ -110,8 +111,8 @@
         //Math.round(days/365*10)/10+" yrs"// years+" years "+leftOverDays+" days"
         var justiceRipple = svg.append("g").attr("transform","translate("+xOffset+","+yOffset+")")
         .on("mouseover",function(d,i){
-            d3.select(this).selectAll("circle").attr("stroke","magenta")
-            d3.select(this).selectAll("path").attr("stroke","magenta")
+            d3.select(this).selectAll("circle").attr("stroke",highlightColor)
+            d3.select(this).selectAll("path").attr("stroke",highlightColor)
             
             d3.select(this).selectAll("text").attr("opacity",1)
 
@@ -122,27 +123,22 @@
             d3.select(this).selectAll("circle").attr("stroke",color)
             d3.select(this).selectAll("path").attr("stroke",color)
             d3.select(this).selectAll("text").attr("opacity",0)
-            if(firstLast ===true){
-              justiceLabel.selectAll("text").attr("opacity",1)
-             }
+            // if(firstLast ===true){
+            //   justiceLabel.selectAll("text").attr("opacity",1)
+            //  }
 
         })
        
+              
+var transitionStep = 40
+var timeStep = 60
+var seatStep = 10
+
         var nameLabel =wiki.name
         var dateLabel = wiki["start date"]+" - "+wiki["end date"]
 
-       var justiceLabel = justiceRipple.append("g")
-       justiceLabel.append("text").text(nameLabel).attr("x",0).attr("y",(years+2)*yearlyRadiusOffset+10)
-        .attr("text-anchor","middle").attr("opacity",0).attr("font-size",12)
-
-        justiceLabel.append("text").text(dateLabel).attr("x",0).attr("y",(years+2)*yearlyRadiusOffset+25)
-        .attr("text-anchor","middle").attr("opacity",0).attr("font-size",12)
-
-        if(firstLast ===true){
-            justiceLabel.selectAll("text").attr("opacity",1)
-        }
-       
-
+      
+ 
         justiceRipple.selectAll("circle")
             .data(new Array(years))
             .enter()
@@ -151,27 +147,82 @@
             .attr("cy",0)
             .attr("r",function(d,i){return (i+1)*yearlyRadiusOffset})
             .attr("fill","white")
+            .attr("fill-opacity",.1)
             .attr("stroke",color)
             .attr("stroke-width",.5)
-            .attr("fill-opacity",opacity)
+            .attr("stroke-opacity",0)
+            .transition()
+            .duration(function(d,i){return 10})
+            .delay(function(d,i){return justiceNumber*timeStep+i*transitionStep})
+
+           // .delay(function(d,i){return xOffset*timeStep+i*transitionStep})
+            .attr("stroke-opacity",1)
+            //.attr("fill-opacity",opacity)
 
 
         justiceRipple//.selectAll('arc')
         .append("path")
-        .attr("opacity",1)
         .attr("fill","none")
+        .attr("opacity",0)
         .attr('stroke',color)            
         .attr("stroke-width",.25)
+        .transition()
+        .duration(function(d,i){return 10})
+       .delay(function(d,i){return justiceNumber*timeStep+years*transitionStep})
+        // .delay(function(d,i){return xOffset*timeStep+years*transitionStep})
+        .attr("opacity",1)
+
         .attr("d",d3.arc()({
             innerRadius: (parseInt(years)+1)*yearlyRadiusOffset,
             outerRadius: (parseInt(years)+1)*yearlyRadiusOffset,
             startAngle:0, 
             endAngle: leftOverRadians 
      }))
+
+     var justiceLabel = justiceRipple.append("g")
+
+    //  justiceLabel.append('rect').attr("width",(nameLabel.length)*4).attr("height",14)
+    //  .attr("x",-(nameLabel.length/2)*4).attr("y",(years+2)*yearlyRadiusOffset).attr("fill","white")
+    //  .attr("opacity",0)
+    //     .transition()
+    //     .delay(function(d,i){return justiceNumber*timeStep+years*transitionStep})
+    //     .attr("opacity",1)
+    //     .transition()
+    //     .duration(1000)
+    //     .delay(100)
+    //     .attr("opacity",0)
+       justiceLabel.append("text").text(nameLabel).attr("x",0).attr("y",(years+2)*yearlyRadiusOffset+10).style("z-index",100)
+        .attr("text-anchor","middle").attr("opacity",0).attr("font-size",12)
+        .attr("opacity",0)
+        .transition()
+        .delay(function(d,i){return justiceNumber*timeStep})
+        .attr("opacity",1)
+        .transition()
+        .duration(100)
+        .delay(years*transitionStep)
+        .attr("opacity",0)
+
+        // justiceLabel.append("text").text(dateLabel).attr("x",0).attr("y",(years+2)*yearlyRadiusOffset+25)
+        // .attr("text-anchor","middle").attr("opacity",0).attr("font-size",12)
+        // .attr("opacity",0)
+        // .transition()
+        // .delay(function(d,i){return justiceNumber*timeStep+years*transitionStep})
+        // .attr("opacity",1)
+        // .transition()
+        // .duration(1000)
+        // .delay(100)
+        // .attr("opacity",0)
+        // if(firstLast ===true){
+        //     justiceLabel.selectAll("text").attr("opacity",1)
+        // }
     }
 
     function formatDict(data){
         var formatted = {}
+        var sorted = data.sort(function(a,b){
+            return a["start date"]-b["start date"]
+        })
+        console.log(sorted)
         for(var i in data){
             if(data[i].name!=undefined){
                 var nameKey =data[i].name.split(" ").join("_").replace(".","")
