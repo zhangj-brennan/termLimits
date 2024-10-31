@@ -10,26 +10,26 @@
 </head>
 <body>
     <div id="chart">Tenures for Supreme Court Justices since the start</div>
-<div id="tooltip">tooltip</div>
+<!-- <div id="tooltip">tooltip</div> -->
 
   <script>
 
     var minDate = new Date("October 5, 1789")
     var maxDate = new Date()
     var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,1400])
-    var grid = 80
+    var grid = 50
     var yearlyRadiusOffset = 3
 
     Promise.all([d3.csv("scotus_succession_flip.csv"),d3.csv("scotus_wiki.csv")])
             .then(function(d){
                 var succession = d[0]
                 var wiki = d[1]
-                var formattedWiki = formatDict(wiki)
+                var formattedWiki = formatDict(wiki,succession)
 
                 var svg = d3.select("#chart")
                     .append("svg")
                     .attr("width",1800)
-                    .attr("height",2000)
+                    .attr("height",700)
                     .append("g")
                     .attr("transform","translate(100,0)")
 
@@ -38,23 +38,25 @@
                 .tickSize(grid/2)
                 .tickFormat(function(d,i){return [1789,1800,1850,1900,1950,2000,2024][i]})
                 
-                var axis = svg.append("g").attr("transform","translate("+yearlyRadiusOffset*2+","+grid+")")
+                var axis = svg.append("g").attr("transform","translate(0,"+grid+")")
+
+                drawMarker(svg,axis,wiki,succession)
 
                 axis.call(xAxis)
 
                     for(var i in succession ){
                         var sLine = succession[i]
                         svg.append("text").text("seat "+(parseInt(i)+1)).attr("x",-5)
-                        .attr("y",(parseInt(i)+1)*grid+5)
+                        .attr("y",(parseInt(i)+3)*grid+5)
                         .attr("text-anchor","end")
-                        .attr("font-size",24)
+                        .attr("font-size",14)
                        
                         svg.append("line")
                         .attr("stroke","black")
                         .attr("x1", 0)
-                        .attr("y1", grid*(parseInt(i)+1))
+                        .attr("y1", grid*(parseInt(i)+3))
                         .attr("x2", xScale(new Date())+yearlyRadiusOffset*2)
-                        .attr("y2", grid*(parseInt(i)+1))
+                        .attr("y2", grid*(parseInt(i)+3))
                         
 
                        // console.log(i)
@@ -71,12 +73,10 @@
                                 // console.log(startDate,endDate)
                               //  console.log(s,Object.values(sLine)) 
                                 if(s == Object.values(sLine).filter(n => n).length-1 || s == 1){
-                                  
                                     drawRipple(i,formattedWiki[nameKey],startDateNumber,days,svg,true)
                                 }
                                 else{
                                     drawRipple(i,formattedWiki[nameKey],startDateNumber,days,svg,false)
-
                                 }
 
                             }
@@ -89,6 +89,78 @@
                     
             })
 
+
+    function drawMarker(svg,axis,wiki,succession){
+       var marker = svg.append("rect").attr("width",1)
+       .attr("height",800)
+       .attr("x",xScale(minDate))
+       .attr("y",grid/2)
+
+        var timeline = svg.append('rect')
+        .attr("x",xScale(minDate))
+        .attr("y",0)
+        .attr('width',xScale(maxDate)-xScale(minDate))
+        .attr("height",1000).attr("opacity",0)//.attr("fill","gold")
+       
+    var markerDots = svg.selectAll(".marker")
+        .data(new Array(9))
+        .enter()
+        .append("circle")
+        .attr("class","marker")
+        .attr("cx",xScale(minDate))
+        .attr("cy",function(d,i){return (i+3)*grid})
+        .attr("r",2)
+
+        timeline.on("mousemove", function(e,d){
+          //  console.log(d3.pointer(e))
+            marker.attr("x",d3.pointer(e)[0])
+            var time = xScale.invert(d3.pointer(e)[0])
+            d3.selectAll(".marker").attr("cx",d3.pointer(e)[0])
+            var lineMarkerLabels = getJusticesAndYears(time,wiki,succession)
+            console.log(lineMarkerLabels)
+
+            d3.selectAll(".markerLabels")
+            .remove()
+
+            svg.selectAll(".markerLabels").data(lineMarkerLabels)
+            .enter()
+            .append("text")
+            .attr("class","markerLabels")
+            .text(function(d,i){
+                return d.name+" work age:"+d.inService
+            })
+            .attr("x",d3.pointer(e)[0])
+            .attr("y",function(d,i){
+                console.log(d.line)
+                return (parseInt(d.line)+3)*grid
+            })
+        })
+    }
+
+    function getJusticesAndYears(time,wiki,succession){
+    //    console.log(date)
+    var currentDate = new Date(time)
+    var justices = []
+        for(var w in wiki){
+            var justice = wiki[w]
+            //console.log(justice)
+            if(justice["start date"]!=undefined){
+                var startDate = new Date(justice["start date"])
+                var endDate = new Date(justice["end date"])
+                var lineNumber = justice["lineNumber"]
+               // console.log(currentDate,startDate,endDate)
+                if(startDate<currentDate && endDate>currentDate){
+                    var yearsInService = Math.round((currentDate-startDate)/1000/60/60/24/365*10)/10
+                    var totalYears = Math.round((justice.days)/365*10)/10
+                   justices.push({name:justice.name,inService:yearsInService, totalYears:totalYears,line:lineNumber})
+                }
+            }
+            // console.log("start",startDate,date)            
+        }
+
+        return justices
+    }
+
     function drawRipple(seatNumber,wiki,startDate,days,svg,firstLast){
         var justiceNumber = wiki.number
         var opacity = .1
@@ -97,7 +169,7 @@
         //var colorScale = d3.scaleLinear().domain([18,30]).range(["black","red"])
        // var color =colorScale(years)
         var color = "black"
-    var highlightColor = "red"
+        var highlightColor = "red"
         var leftOverDays = days-years*365
         var leftOverPercent = leftOverDays/365
         var leftOverDegrees = leftOverPercent*360
@@ -105,34 +177,34 @@
        // console.log(days,years,leftOverDays,leftOverPercent,leftOverDegrees, leftOverRadians)
 
        var xOffset = xScale(new Date(startDate))+(years+2)*yearlyRadiusOffset
-        var yOffset = (parseInt(seatNumber)+1)*grid
+        var yOffset = (parseInt(seatNumber)+3)*grid
        // console.log(startDate,xOffset)
 
         //Math.round(days/365*10)/10+" yrs"// years+" years "+leftOverDays+" days"
         var justiceRipple = svg.append("g").attr("transform","translate("+xOffset+","+yOffset+")")
-        .on("mouseover",function(d,i){
-            d3.select(this).selectAll("circle").attr("stroke",highlightColor)
-            d3.select(this).selectAll("path").attr("stroke",highlightColor)
+        // .on("mouseover",function(d,i){
+        //     d3.select(this).selectAll("circle").attr("stroke",highlightColor)
+        //     d3.select(this).selectAll("path").attr("stroke",highlightColor)
             
-            d3.select(this).selectAll("text").attr("opacity",1)
+        //     d3.select(this).selectAll("text").attr("opacity",1)
 
-            d3.select("#tooltip").html("test")
+        //     d3.select("#tooltip").html("test")
 
-        })
-        .on("mouseout",function(d,i){
-            d3.select(this).selectAll("circle").attr("stroke",color)
-            d3.select(this).selectAll("path").attr("stroke",color)
-            d3.select(this).selectAll("text").attr("opacity",0)
-            // if(firstLast ===true){
-            //   justiceLabel.selectAll("text").attr("opacity",1)
-            //  }
+        // })
+        // .on("mouseout",function(d,i){
+        //     d3.select(this).selectAll("circle").attr("stroke",color)
+        //     d3.select(this).selectAll("path").attr("stroke",color)
+        //     d3.select(this).selectAll("text").attr("opacity",0)
+        //     // if(firstLast ===true){
+        //     //   justiceLabel.selectAll("text").attr("opacity",1)
+        //     //  }
 
-        })
+        // })
        
-              
-var transitionStep = 40
-var timeStep = 100
-var seatStep = 10
+                    
+        var transitionStep = 40
+        var timeStep = 100
+        var seatStep = 10
 
         var nameLabel =wiki.name
         var dateLabel = wiki["start date"]+" - "+wiki["end date"]
@@ -191,15 +263,18 @@ var seatStep = 10
     //     .duration(1000)
     //     .delay(100)
     //     .attr("opacity",0)
-       justiceLabel.append("text").text(nameLabel).attr("x",0).attr("y",(years+2)*yearlyRadiusOffset+10).style("z-index",100)
+       justiceLabel.append("text")
+       .text(nameLabel).attr("x",0)
+       .attr("y",(years+2)*yearlyRadiusOffset+10)
+       .style("z-index",100)
         .attr("text-anchor","middle").attr("opacity",0).attr("font-size",12)
         .attr("opacity",0)
         .transition()
-        .delay(function(d,i){return justiceNumber*timeStep})
+        .delay(function(d,i){return justiceNumber*timeStep+years*transitionStep})
         .attr("opacity",1)
         .transition()
-        .duration(100)
-        .delay(years*transitionStep)
+        .duration(1000)
+        .delay(100)
         .attr("opacity",0)
 
         // justiceLabel.append("text").text(dateLabel).attr("x",0).attr("y",(years+2)*yearlyRadiusOffset+25)
@@ -217,16 +292,40 @@ var seatStep = 10
         // }
     }
 
-    function formatDict(data){
+    function formatSuccessionLine(succession){
+        var dict = {}
+        for(var s in succession){
+            var seat = s
+            var line = succession[s]
+           // console.log(line)
+                for(var l in line){
+               // console.log(line[l])
+                var name = line[l].split(" ").join("_").replace(".","")
+                dict[name]=s
+            
+            }
+            //console.log(line)
+        }
+       // console.log(dict)
+        return dict
+    }
+    function formatDict(data,succession){
+        var successionDictionary = formatSuccessionLine(succession)
+
         var formatted = {}
         var sorted = data.sort(function(a,b){
             return a["start date"]-b["start date"]
         })
-        console.log(sorted)
+       // console.log(sorted)
         for(var i in data){
             if(data[i].name!=undefined){
                 var nameKey =data[i].name.split(" ").join("_").replace(".","")
+                var lineNumber = successionDictionary[nameKey]
+                // if(lineNumber==undefined){
+                //     console.log(nameKey,lineNumber)
+                // }
                 formatted[nameKey]=data[i]
+                formatted[nameKey]["lineNumber"]=lineNumber
             }
         }
         return formatted
