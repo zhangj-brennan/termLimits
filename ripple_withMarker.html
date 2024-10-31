@@ -40,7 +40,6 @@
                 
                 var axis = svg.append("g").attr("transform","translate(0,"+grid+")")
 
-                drawMarker(svg,axis,wiki,succession)
 
                 axis.call(xAxis)
 
@@ -85,7 +84,9 @@
 
                        // break
 
-                    }                
+                    }           
+                    drawMarker(svg,axis,wiki,succession)
+     
                     
             })
 
