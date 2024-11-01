@@ -6,81 +6,223 @@
     body{
         font-family:helvetica;
     }
+    .toggle{
+        display:inline-block;
+        border:1px solid black;
+        padding:5px;
+        margin:2px;
+        cursor:pointer;
+    }
+    #compare{background-color:#aaa}
+    #length{background-color:#aaa}
 </style>
 </head>
 <body>
-    <div id="chart">Tenures for Supreme Court Justices since the start</div>
+    Tenures for Supreme Court Justices since the start<br>
+    <div id="controls">
+        X 
+        <div id="startDateX" class="toggle x">view as timeline</div>
+        <div id="compare" class="toggle x">set to 0 to compare</div>
+<br>
+        Y 
+        <div id="length" class="toggle y">sort by term length</div>
+        <div id="startDateY" class="toggle y">sort by start date</div>
+    </div>
+    <div id="chart"></div>
 <div id="tooltip">tooltip</div>
 
   <script>
 
+    
+
     var minDate = new Date("October 5, 1789")
     var maxDate = new Date()
-    var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,1400])
+    var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,1200])
     var grid = 80
     var yearlyRadiusOffset = 3
-    var color = "magenta"
+    var color = "#aaa"
+    var highlightColor = "magenta"
+    var barWidth = 6
+    var barOffset = 6
+    var opacity = .1
+    var colorScale = d3.scaleLinear().domain([0,40]).range([color,highlightColor])
 
     Promise.all([d3.csv("scotus_succession_flip.csv"),d3.csv("scotus_wiki.csv")])
-            .then(function(d){
-                var succession = d[0]
-                var wiki = d[1]
-                //var formattedWiki = formatDict(wiki)
-                //console.log(formattedWiki)
-                //console.log(succession)
-
-
+            .then(function(data){
+               // console.log(data)
+                var succession = data[0]
+                var wiki = data[1]
+                var formattedWiki = formatWiki(wiki)
 
                 var svg = d3.select("#chart")
                     .append("svg")
                     .attr("width",800)
-                    .attr("height",2000)
+                    .attr("height",1000)
                     .append("g")
-                  //  .attr("transform","translate(100,0)")
+                    .attr("transform","translate(10,10)")
 
                 var barData = formatWiki(wiki)
 
-              // for(var i in format)
 
               svg.selectAll("rect")
                 .data(barData)
                 .enter()
                 .append("rect")
-                .attr("x",100)
-                .attr("y",function(d,i){return i*10})
+                .attr("x",0)
+                .attr("class","bars")
+                .attr("id",function(d){
+                    return d.name.split(" ").join("_")
+                    .split(".").join("")
+                    .split("\'").join("")
+                })
+                .attr("y",function(d,i){return i*barOffset})
                 .attr("width",function(d,i){return d.days/100})
-                .attr("height",9)
+                .attr("height",barWidth)
+                .attr("opacity",.4)
                 .attr("fill",function(d){
-                    if(d.name =="Clarence Thomas"){
-                        return "red"
-                    }
-                    return "black"
+                    return colorScale(d.days/365)
                 })
 
                 svg.selectAll("text")
                 .data(barData)
                 .enter()
                 .append("text")
-                .attr("x",0)
-                .attr("y",function(d,i){return i*10})
-               
-                .attr("text",function(d){
-    console.log(d.name)
-                    return d.name
-                    
+                .attr("x",function(d,i){
+                    return d.days/100
+                })
+                .attr("id",function(d){
+                    return d.name.split(" ").join("_").split(".").join("")
+                    .split("\'").join("")
+
+                })
+                .attr("class","barLabels")
+                .attr("y",function(d,i){return i*barOffset})
+                .text(function(d,i){return d.name})
+                .attr("fill","black")
+                .attr("font-size",10)
+                .attr("opacity",0)
+
+
+                d3.selectAll(".bars")
+                .on("mouseover",function(){
+                    var idName = d3.select(this).attr("id")
+                    d3.selectAll("#"+idName).attr("opacity",1)
+                })
+                .on("mouseout",function(){
+                    var idName = d3.select(this).attr("id")
+                    d3.selectAll("#"+idName).attr("opacity",.4)
+                    d3.selectAll(".barLabels").attr("opacity",0)
+
                 })
 
+                d3.selectAll(".barLabels")
+                .on("mouseover",function(){
+                    var idName = d3.select(this).attr("id")
+                    d3.selectAll("#"+idName).attr("opacity",1)
+                })
+                .on("mouseout",function(){
+                    var idName = d3.select(this).attr("id")
+                    d3.selectAll("#"+idName).attr("opacity",.4)
+                    d3.selectAll(".barLabels").attr("opacity",0)
+                })
+
+
+                d3.select("#startDateY")
+                .on("click",function(){
+                    d3.selectAll(".y").style("background-color","#fff")
+                    d3.select(this).style("background-color","#aaa")
+                    d3.selectAll(".bars")
+                        .each(function(d){
+                            d3.select(this).transition()
+                                .attr("y",d.startRank*barOffset)
+                        })
+                    d3.selectAll(".barLabels")
+                    .each(function(d){
+                            d3.select(this).transition()
+                                .attr("y",d.startRank*barOffset)
+                        })
+                })
+
+                d3.select("#length")
+                .on("click",function(){
+                    d3.selectAll(".y").style("background-color","#fff")
+                    d3.select(this).style("background-color","#aaa")
+                    d3.selectAll(".bars")
+                        .each(function(d){
+                            d3.select(this).transition()
+                                .attr("y",d.daysRank*barOffset)
+                        })
+                        d3.selectAll(".barLabels")
+                        .each(function(d){
+                            d3.select(this).transition()
+                                .attr("y",d.daysRank*barOffset)
+                        })
+                })
+
+            d3.select("#startDateX")
+                    .on("click",function(){
+                        d3.selectAll(".x").style("background-color","#fff")
+                        d3.select(this).style("background-color","#aaa")
+                        var sorted = barData.sort(function(a,b){
+                        return new Date(a.start)-new Date(b.start)
+                    })
+                       d3.selectAll(".bars")
+                        .each(function(d){
+                            d3.select(this).transition()
+                                .attr("x",xScale(new Date(d.start)))
+                        })
+                        d3.selectAll(".barLabels")
+                        .each(function(d){
+                            d3.select(this).transition()
+                                .attr("x",xScale(new Date(d.start)))
+                        })
+                    })
+
+            d3.select("#compare")
+                    .on("click",function(){
+                        d3.selectAll(".x").style("background-color","#fff")
+                        d3.select(this).style("background-color","#aaa")
+                        d3.selectAll(".bars").transition()
+                        .attr("x",0)
+                        d3.selectAll(".barLabels").transition()
+                        .attr("x",function(d){return d.days/100})
+                    })
             })
+
+            function sortBy(data,column){
+                var sorted = data.sort(function(a,b){
+                    return b[column]-a[column]
+                })
+            }
+            
             function formatWiki(wiki){
                 var formatted = []
+
                 for(var w in wiki){
                     var name = wiki[w].name
-                    var days = parseInt(wiki[w].days)
-                    formatted.push({name:name,days:days})
+                    if(name!=undefined){
+                      //  console.log(name)
+                        var days = parseInt(wiki[w].days)
+                        var startDate = wiki[w]["start date"]
+                        formatted.push({name:name,days:days,start:startDate})
+                    }
+                    
                 }
-               var sorted = formatted.sort(function(a,b){
+                sorted = formatted.sort(function(a,b){
+                    return new Date(a.start)-new Date(b.start)
+                })
+                for(var s in sorted){
+                    sorted[s]["startRank"]=s
+                }
+                var sorted = formatted.sort(function(a,b){
                     return b.days-a.days
                 })
+                for(var s in sorted){
+                    sorted[s]["daysRank"]=s
+                }
+
+              
+
                 return sorted
             }
   </script>

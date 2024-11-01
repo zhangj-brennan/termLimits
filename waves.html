@@ -17,7 +17,7 @@
     var minDate = new Date("October 5, 1789")
     var maxDate = new Date()
     var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,1000])
-    var grid = 80
+    var grid = 60
     var yearlyRadiusOffset = 3
     var color = "black"
 
@@ -142,9 +142,9 @@
         // justiceLabel.append("text").text(dateLabel).attr("x",xScale(startDate)).attr("y",24)
         // .attr("text-anchor","middle").attr("opacity",0).attr("font-size",12)
 
-        if(years>18){
-            justiceLabel.selectAll("text").attr("opacity",1)
-        }
+        // if(years>18){
+        //     justiceLabel.selectAll("text").attr("opacity",1)
+        // }
        
         const line = d3.line()
         .curve(d3.curveBasis);
@@ -167,10 +167,11 @@
         justiceRipple//.selectAll("path")
         .append("path")
         .attr("d",line(points))
-        .attr("fill","none")
+        .attr("fill","white")
+
         .attr("stroke","black")
        // .attr("stroke",cScale(years))
-      //  .attr("opacity",(oScale(years)))
+        .attr("opacity",.3)
 
         .attr("stroke-dasharray", totalLength + " " + totalLength)
     .attr("stroke-dashoffset", totalLength)
