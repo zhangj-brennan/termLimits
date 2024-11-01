@@ -16,10 +16,10 @@
 
     var minDate = new Date("October 5, 1789")
     var maxDate = new Date()
-    var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,1400])
+    var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,1000])
     var grid = 80
     var yearlyRadiusOffset = 3
-    var color = "magenta"
+    var color = "black"
 
     Promise.all([d3.csv("scotus_succession_flip.csv"),d3.csv("scotus_wiki.csv")])
             .then(function(d){
@@ -57,11 +57,17 @@
                        
                         svg.append("line")
                         .attr("stroke",color)
+                        .attr("fill","white")
+                        .attr("fill-opacity",.2)
                         .attr("x1", 0)
                         .attr("y1", grid*(parseInt(i)+2))
-                        .attr("x2", xScale(new Date())+yearlyRadiusOffset*2)
+                        .attr("x2",0)
                         .attr("y2", grid*(parseInt(i)+2))
-                        .attr("opacity",.5)
+                       // .transition()
+                        ///.duration(8000)
+                        .attr("x2", xScale(new Date())+yearlyRadiusOffset*2)
+
+                       // .attr("opacity",.5)
                         
 
                        // console.log(i)
@@ -79,7 +85,6 @@
                                 // console.log(startDate,endDate)
                               //  console.log(s,Object.values(sLine)) 
                                 if(s == Object.values(sLine).filter(n => n).length-1 || s == 1){
-                                  
                                     drawRipple(i,formattedWiki[nameKey],startDateNumber,endDateNumber,days,svg,true)
                                 }
                                 else{
@@ -146,17 +151,26 @@
         var midPoint = new Date((startDate.getTime() + endDate.getTime()) / 2);
 
 //console.log(days,startDate,midPoint)
-    var hScale = d3.scalePow().domain([0,30]).range([1,150])
+    var hScale = d3.scalePow().domain([0,30]).range([1,80])
     var oScale = d3.scaleLinear().domain([10,35]).range([0.1,.5])
     var cScale = d3.scaleLinear().domain([5,30]).range(["#aaa",color])
         var points = [[xScale(startDate),0],[xScale(midPoint),-hScale(years)],[xScale(endDate)-5,0],[xScale(endDate),0]]
+
+        var totalLength = 600
 
         justiceRipple//.selectAll("path")
         .append("path")
         .attr("d",line(points))
         .attr("fill","none")
-        .attr("stroke",cScale(years))
-        .attr("opacity",(oScale(years)))
+        .attr("stroke","black")
+       // .attr("stroke",cScale(years))
+      //  .attr("opacity",(oScale(years)))
+
+        .attr("stroke-dasharray", totalLength + " " + totalLength)
+    .attr("stroke-dashoffset", totalLength)
+    .transition().duration(3000)
+    .delay(xScale(startDate)*5)//.ease("linear")
+    .attr("stroke-dashoffset", 0)
             
     }
 
