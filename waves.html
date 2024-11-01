@@ -156,9 +156,9 @@
     var cScale = d3.scaleLinear().domain([5,30]).range(["#aaa",color])
   //  console.log(xScale(midPoint)*.8)
         var points = [[xScale(startDate),0],
-        [xScale(midPoint),-hScale(years)],
-        //[xScale(midPoint)+6,-hScale(years)],
-      //  [xScale(midPoint),-hScale(years)/2],
+        [xScale(midPoint)-5,-hScale(years)],
+        [xScale(midPoint)+6,-hScale(years)],
+        [xScale(midPoint),-hScale(years)/2],
         [xScale(endDate)-5,0],
         [xScale(endDate),0]]
 
