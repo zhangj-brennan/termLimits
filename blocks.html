@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="d3.v7.min.js" charset="utf-8"></script>
+<style>
+    body{
+        font-family:helvetica;
+    }
+</style>
+</head>
+<body>
+    <div id="chart1"></div>
+
+    <div id="chart3"></div>
+    <div id="chart2"></div>
+
+  <script>
+
+
+
+
+    var grid = 30
+    var judgeColor = "#ddd"
+    var presidentColor = "magenta"
+    var judgeGap = 2
+    var termGap = 2
+
+
+    var topSvg = d3.select("#chart1").append("svg").attr("width",1000).attr("height",200)
+    .append("g").attr("transform","translate("+grid*2+",0)")
+   
+
+    function drawJudgeBrick(svg,offsetX,offsetY,startYear){
+
+        var brick = svg.append("g")
+        .attr("id","judge_"+startYear).attr("class","judgeBrick")
+
+        brick//.selectAll(".judges_top")
+            .append("rect")
+            .attr("class","judgeBrick")
+            .attr("id","judge_"+startYear)
+            .attr("width",grid*18-2)
+            .attr("height",grid-2)
+            .attr("x",0)
+            .attr("y",0)
+            .attr("rx",2)
+            .attr("fill",judgeColor)
+            
+            .attr("opacity",.5)
+            .attr("transform","translate("+offsetX+","+offsetY+")")
+         //   .attr("id","_"+startYear)
+
+          //  .attr("stroke","black")
+
+        brick.selectAll(".dotsJudge")
+            .data(Array.from(Array(18).keys()))
+            .enter()
+            .append("circle")
+            .attr("class","judgeBrick ")
+            .attr("id","judge_"+startYear)
+            .attr("r",grid/3)
+            .attr("cy",grid/2-1)
+            .attr("cx",function(d,i){
+                return i*grid+grid/2-1
+            })
+            .attr("fill",judgeColor)
+            .attr("transform","translate("+offsetX+","+offsetY+")")
+    }
+
+    function drawPresidentBrick(svg,offsetX,offsetY,startYear){
+       var brick = svg.append("g")
+       .attr("id","_"+startYear)
+       .on("mouseover",function(d,i){
+            //console.log("brick",startYear)
+            d3.select(this).attr("stroke","black").attr("stroke-opacity",1)
+
+            d3.selectAll(".judgeBrick").each(function(){
+                var jYear = parseInt(d3.select(this).attr("id").replace("judge_",""))
+
+                if(jYear<startYear && jYear+18>startYear+4){
+                    console.log(jYear,jYear+18,startYear)
+                    d3.selectAll("#judge_"+jYear).attr("stroke","black")//.attr("stroke-opacity",1)
+
+                }
+                if(jYear>startYear && jYear<startYear+4){
+                  //  console.log(jYear,jYear%9)
+                    d3.selectAll("#judge_"+jYear)
+                    .attr("stroke","black").attr("stroke-opacity",1)
+                    .attr("fill","gold")
+                    svg.append("text").text("Appointed").attr("x",jYear*grid-10)
+                    .attr("y",jYear/2%9*(grid)+grid*4-10).attr("class","appointedLabel")
+                    .attr("text-anchor","end")
+                }
+            })
+        })
+        .on("mouseout",function(){
+            d3.select(this).attr("stroke","none")
+            d3.selectAll(".judgeBrick").attr("stroke","none").attr("fill",judgeColor)
+            d3.selectAll(".appointedLabel").remove()
+
+        })
+        brick//.selectAll(".judges_top")
+            .append("rect")
+            .attr("class","pres_top")
+            .attr("width",grid*4-2)
+            .attr("height",grid)
+            .attr("x",0)
+            .attr("y",0)
+            .attr("rx",5)
+            .attr("fill",presidentColor)
+            .attr("opacity",.4)
+            .attr("transform","translate("+offsetX+","+offsetY+")")
+
+        brick.selectAll(".dotsPres")
+            .data(Array.from(Array(4).keys()))
+            .enter()
+            .append("circle")
+            .attr("class","dots")
+            .attr("r",grid/3)
+            .attr("cy",grid/2)
+            .attr("cx",function(d,i){
+                return i*grid+grid/2-1
+            })
+            .attr("fill",presidentColor)
+            .attr("opacity",.8)
+            .attr("transform","translate("+offsetX+","+offsetY+")")
+    }
+
+    drawPresidentBrick(topSvg,grid*7,grid*2.5,-100)
+    drawJudgeBrick(topSvg,grid*7,grid,-100)
+
+    topSvg.append("text").text("Presidential Term: 4 Years")
+            .attr("text-anchor","end")
+            .attr("x",grid*7-10)
+            .attr("y",grid*3.5-10)
+
+    topSvg.append("text").text("Proposed Judicial Term: 18 Years")
+            .attr("text-anchor","end")
+            .attr("x",grid*7-10)
+            .attr("y",grid*2-10)
+  ////////          
+
+    var judges = Array.from(Array(90).keys())
+    var presidents = Array.from(Array(20).keys())
+    
+    var bottomSvg = d3.select("#chart3")
+        .append("svg")
+        .attr("width",3000)
+        .attr("height",500)
+        .append("g")
+        .attr("transform","translate(-"+grid*19+",0)")
+     
+    bottomSvg.append('text')
+        .text("In every presidential term, the president appoints a new justice in the 2nd and 4th year")
+        .attr("x",0)
+        .attr("y",grid)
+        .attr("transform","translate(-"+grid*2+",0)")
+
+     for(var p in presidents){
+        var offsetX = p*4-1
+        var offsetY = grid*1.5
+        drawPresidentBrick(bottomSvg,offsetX*(grid),offsetY,offsetX)
+
+     }
+    for(var j in judges){
+        var offsetX = j*2
+        var offsetY = j%9
+        drawJudgeBrick(bottomSvg,offsetX*(grid),offsetY*(grid)+grid*3, offsetX)
+    }
+
+    var svg = d3.select("#chart2")
+        .append("svg")
+        .attr("width",1000)
+        .attr("height",500)
+        .append("g")
+        .attr("transform","translate("+grid*2+",0)")
+    var xScale = d3.scaleLinear().domain([0,100]).range([0,100*grid])
+    var axis = d3.axisBottom().scale(xScale).tickSize(grid*14).ticks(10)
+  // xAxis.attr("transform","translate(0,"+grid*12+")")
+    svg.append('text')
+        .text("Presidential Terms")
+        .attr("x",2)
+        .attr("y",grid-2)
+        .attr("transform","translate(-"+grid*2+",0)")
+
+    svg.append('text')
+        .text("Supreme Court Seats")
+        .attr("x",2)
+        .attr("y",grid*3-2)
+        .attr("transform","translate(-"+grid*2+",0)")
+    //for(var t=0;t<5;t++){
+
+        svg.selectAll(".judges")
+            .data(judges)
+            .enter()
+            .append("rect")
+            .attr("class","judges")
+            .attr("width",grid*18-termGap)
+            .attr("height",grid-judgeGap)
+            .attr("rx",15)
+
+            .attr("x",function(d,i){return (i-10)*2*grid+grid})
+            .attr("y",function(d,i){return (i%9)*grid+grid*3})
+            .attr("startYear",function(d,i){
+                var startYear = (i-10)*2
+            })
+            .attr("endYear",function(d,i){
+                var endYear = (i-10)*2+18
+            })
+            .attr("id",function(d,i){
+                var startYear = (i-10)*2
+                var endYear = (i-10)*2+18
+                return "_"+startYear+"_"+endYear
+            })    
+            .attr("fill",judgeColor)
+            .attr("opacity",.2)
+
+//    }
+
+    svg.selectAll(".presidents")
+    .data(presidents)
+    .enter()
+    .append("rect")
+    .attr("class","presidents")
+    .attr("width",grid*4-termGap)
+    .attr("height",grid-judgeGap)
+    .attr("rx",15)
+    .attr("x",function(d,i){return (i)*4*grid})
+    .attr("y",function(d,i){return grid})
+    .attr("startYear",function(d,i){
+        return i*4
+    })
+    .attr("endYear",function(d,i){
+        return i*4+4
+    })
+    .attr("id",function(d,i){
+        var startYear = i*4
+        var endYear = i*4+4
+        return "_"+startYear+"_"+endYear
+    })
+
+    .attr("fill",presidentColor)
+    .attr("opacity",.5)
+    .on("mouseover",function(d,i){
+       var pStart = d3.select(this).attr("startYear")
+       var pEnd = d3.select(this).attr("endYear")
+        d3.select(this).attr("opacity",1)
+       var judges = d3.selectAll(".judges")
+       .each(function(d,i){
+            var id = d3.select(this).attr("id")
+            var jStart = parseInt(id.split("_")[1])
+            var jEnd = parseInt(id.split("_")[2])
+
+            if(jStart>=pStart && jStart<pEnd){
+                //console.log(pStart,pEnd,jStart)
+                d3.select("#_"+jStart+"_"+jEnd).attr("opacity",1)
+                .attr("fill","gold")
+
+                svg.append("text").text("Newly appointed")
+                .attr("x",jStart*grid+grid+5)
+                .attr("y",(i%9)*grid+grid*4-10)
+                .attr("class","newlyAppointed")
+
+            }
+            if(jStart<pStart && jEnd>=pEnd){
+                d3.select("#_"+jStart+"_"+jEnd).attr("opacity",.5)
+                svg.append("text").text(Math.abs(jStart-pStart)+" years on bench")
+                .attr("x",jStart*grid+grid+10)
+               // .attr("x",20)
+                .attr("y",(i%9)*grid+grid*4-10)
+                .attr("class","newlyAppointed")
+
+            }
+            // if(jEnd>=pStart && jEnd<pEnd){
+            //     console.log(pStart,pEnd,jStart)
+            //     d3.select("#_"+jStart+"_"+jEnd).attr("fill","red").attr("opacity",1)
+            // }
+       })
+    })
+    .on("mouseout",function(){
+        d3.selectAll(".newlyAppointed").remove()
+        d3.select(this).attr("opacity",.5)
+        d3.selectAll(".judges").attr("fill","cyan").attr("opacity",.2)
+    })
+
+
+   // var xAxis =svg.append("g").call(axis)//.attr("id","axis")
+
+    svg.selectAll(".seatLabels").data(Array.from(Array(9).keys()))
+    .enter().append("text").text(function(d){return d+1})
+    .attr("x",0).attr("y",function(d,i){return i*grid+grid*4-10})
+    .attr("transform","translate(-"+grid*2+",0)")
+
+  </script>
+  
+</body>
+</html>
