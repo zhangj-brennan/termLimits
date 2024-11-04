@@ -8,7 +8,7 @@ body{
 font-family:"Benton Sans",sans-serif;
 background-color:white;
 padding:20px;
-font-size:16px;
+font-size:24px;
 font-weight:300;
 }
 .slidecontainer {
@@ -20,7 +20,7 @@ padding-bottom:20px;
 width:200px;
 height: 10px;
 border-radius:5px;
-background: #ffca42;
+background: #aaa;
 outline: none;
 opacity: 1;
 -webkit-transition: .2s;
@@ -48,14 +48,15 @@ border-radius:15px;
 .slider::-moz-range-thumb {
 width: 25px;
 height: 25px;
-background: #ffca42;
+background: #aaa;
 cursor: pointer;
 }
 .subtitle{
 padding:10px;
+font-size:24px;
 }
 #title{
-font-size:36px;
+font-size:18px;
 padding:10px;
 }
 p{
@@ -64,7 +65,7 @@ padding:10px;
 </style>
 </head>
 <body>
-<div id="title">Term length calculator <b>test</b></div>
+<div id="title">Term length calculator</div>
 
 <div class="slidecontainer">
 <p> If justices serve <span id="termValue"></span>
@@ -76,9 +77,9 @@ and are appointed every <span id="appointValue"></span>
 </div>
 <div id="judges" class="subtitle">then 9 Supreme Court seats would be timed like this: </div>
 <div id="chart2"></div>
-<div id="presidents" class="subtitle">an each 4 year presidential term would appoint: </div>
+<div id="presidents" class="subtitle">and each 4 year presidential term would appoint: </div>
 <div id="chart1"></div>
-<div id="presidents" class="subtitle">The average work age of justices would be: TBD </div>
+<!-- <div id="presidents" class="subtitle">The average work age of justices would be: TBD </div> -->
 
 
 <script>
@@ -103,8 +104,8 @@ var termOutput = document.getElementById("termValue");
 termOutput.innerHTML = termSlider.value;
 var gridW = 8
 var gridH = 20
-var presidentColor = "#ffca42"
-var judgeColor = "#e7131a"
+var presidentColor = "#555"
+var judgeColor = "#aaa"
 var gridColor = "black"//"rgb(57, 149, 178)"
 
 var appointSlider = document.getElementById("frequency")
@@ -218,7 +219,7 @@ return d.count//+" justice"
 return d.count//+" justices"
 })
 .attr("x",function(d,i){return i*gridW*4+gridW*2})
-.attr("y",gridH)
+.attr("y",gridH-2)
 .attr("fill",gridColor)
 .attr("font-size",24)
 .attr("text-anchor","middle")
