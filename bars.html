@@ -5,6 +5,7 @@
 <style>
     body{
         font-family:helvetica;
+        font-size:12px;
     }
     .toggle{
         display:inline-block;
@@ -13,179 +14,278 @@
         margin:2px;
         cursor:pointer;
     }
-    #compare{background-color:#aaa}
-    #length{background-color:#aaa}
+    #startDateX{background-color:cyan}
+    #startDateY{background-color:cyan}
+    #chart{
+        position:absolute;
+        left:0px;
+        top:0px;
+        z-index:-1;
+
+    }
+    #controls{
+        position:absolute;
+        right:0px;
+        top:0px;
+        text-align:right;
+        z-index:1;
+    }
+    #tooltip{
+        position:absolute;
+        left:0px;
+        top:0;
+        visibility:visible;
+        z-index:2;
+        background-color:rgba(0,0,0,1);
+        color:white;
+        padding:5px;
+    }
 </style>
 </head>
 <body>
-    Tenures for Supreme Court Justices since the start<br>
     <div id="controls">
-        X 
+        X AXIS
         <div id="startDateX" class="toggle x">view as timeline</div>
-        <div id="compare" class="toggle x">set to 0 to compare</div>
-<br>
-        Y 
+        <div id="compare" class="toggle x">view as bar chart</div>
+        Y AXIS
         <div id="length" class="toggle y">sort by term length</div>
         <div id="startDateY" class="toggle y">sort by start date</div>
+        <div id="succession" class="toggle x y">view as succession lines</div>
     </div>
     <div id="chart"></div>
-<div id="tooltip">tooltip</div>
+<div id="tooltip"></div>
 
   <script>
 
-    
-
     var minDate = new Date("October 5, 1789")
     var maxDate = new Date()
-    var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,1200])
+    var xMax = 1000
+    var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,xMax])
     var grid = 80
     var yearlyRadiusOffset = 3
-    var color = "#aaa"
-    var highlightColor = "magenta"
+    var color = "black"
+    var barColor = "black"
+
+    var highlightColor = "cyan"
     var barWidth = 6
-    var barOffset = 6
+    var barOffset = 8
+    var labelSize = 10
     var opacity = .1
-    var colorScale = d3.scaleLinear().domain([0,40]).range([color,highlightColor])
+    var barOpacity = 1
+    var colorScale = d3.scaleLinear().domain([10,20]).range([color,barColor])
+    var totalDays = (maxDate-minDate)/1000/24/60/60
+    var pixelsPerDay = xMax/totalDays
+    var daysScale = d3.scaleLinear().domain([0,40*365]).range([0,40*365*pixelsPerDay])
 
     Promise.all([d3.csv("scotus_succession_flip.csv"),d3.csv("scotus_wiki.csv")])
             .then(function(data){
                // console.log(data)
                 var succession = data[0]
                 var wiki = data[1]
-                var formattedWiki = formatWiki(wiki)
-
+            //    var formattedWiki = formatWiki(wiki,succession)
                 var svg = d3.select("#chart")
                     .append("svg")
-                    .attr("width",800)
-                    .attr("height",1000)
+                    .attr("width",xMax+200)
+                    .attr("height",2000)
                     .append("g")
-                    .attr("transform","translate(10,10)")
+                    .attr("transform","translate(30,80)")
 
-                var barData = formatWiki(wiki)
+                
+                 
+                var barData = formatWiki(wiki,succession)
+
+                var timelineMarkers = [new Date("January 1, 1800"),new Date("January 1, 1900"),new Date("January 1, 2000"),new Date()]
+
+                    var timelineAxis = d3.axisTop().scale(xScale).ticks(2)
+                    .tickValues(timelineMarkers)
+                    .tickFormat(function(d,i){
+                       
+                        if(i == timelineMarkers.length-1){
+                            return "TODAY"
+                        }
+                        return d.getFullYear()
+                    })
 
 
+                    svg.append('g').call(timelineAxis).attr("class","timelineAxis")
+                    .attr("transform","translate(0,-2)").attr("visibility","visible")
+
+                    var daysMarkers = [0,365*10,365*20,365*30,365*40]
+
+                    var yearsWorkedAxis = d3.axisTop().scale(daysScale)
+                    .tickValues(daysMarkers)
+                    .tickFormat(function(d,i){
+                        return d/365+" yrs"
+                    })
+
+
+                    svg.append('g').attr("class","yearsWorkedAxis").call(yearsWorkedAxis)
+                    .attr("transform","translate(0,-2)").attr("visibility","hidden")
+
+            
               svg.selectAll("rect")
                 .data(barData)
                 .enter()
                 .append("rect")
-                .attr("x",0)
+                .attr("y",function(d){
+                    return d.startRank*barOffset
+                })
+                .attr("x",function(d,i){
+                    return xScale(new Date(d.start))
+                })
                 .attr("class","bars")
                 .attr("id",function(d){
+                    //console.log(d.name)
                     return d.name.split(" ").join("_")
                     .split(".").join("")
                     .split("\'").join("")
                 })
-                .attr("y",function(d,i){return i*barOffset})
-                .attr("width",function(d,i){return d.days/100})
+                .attr("width",function(d,i){
+                    return d.days*pixelsPerDay})
                 .attr("height",barWidth)
-                .attr("opacity",.4)
+                .attr("opacity",barOpacity)
                 .attr("fill",function(d){
                     return colorScale(d.days/365)
                 })
+                .style("cursor","pointer")
+                .on("mouseover",function(e,d){
+                       d3.select("#tooltip")
+                       .html("<b>"+d.name+"</b><br>start date: "+d.start+"<br>years served: "+Math.round(d.days/365*10)/10)
+                       .style("left", e.offsetX+10+ "px")
+                       .style("top", e.offsetY + "px")
+                       .style("visibility","visible")
+                       d3.select(this).attr("fill",highlightColor)
+                       
+                    })
+                    .on("mouseout",function(){
+                        d3.select(this).attr("fill",color)
+                        d3.select("#tooltip").html("")
+                        .style("visibility","hidden")
 
-                svg.selectAll("text")
+                    })
+
+               // console.log(barData.length)
+
+               
+            svg.selectAll(".barLabel")
                 .data(barData)
                 .enter()
                 .append("text")
+                .attr("class","barLabel")
                 .attr("x",function(d,i){
-                    return d.days/100
+                    
+                    return xScale(new Date(d.start))+d.days*pixelsPerDay+2
                 })
                 .attr("id",function(d){
                     return d.name.split(" ").join("_").split(".").join("")
                     .split("\'").join("")
-
                 })
                 .attr("class","barLabels")
-                .attr("y",function(d,i){return i*barOffset})
-                .text(function(d,i){return d.name})
+                .attr("y",function(d){return (parseInt(d.startRank)+1)*barOffset-2})
+                .text(function(d,i){
+                    var years = Math.round(d.days/365*10)/10
+                    return d.name//+" - "+years+" years"
+                })
                 .attr("fill","black")
-                .attr("font-size",10)
-                .attr("opacity",0)
+                .attr("font-size",labelSize)
 
 
-                d3.selectAll(".bars")
-                .on("mouseover",function(){
-                    var idName = d3.select(this).attr("id")
-                    d3.selectAll("#"+idName).attr("opacity",1)
-                })
-                .on("mouseout",function(){
-                    var idName = d3.select(this).attr("id")
-                    d3.selectAll("#"+idName).attr("opacity",.4)
-                    d3.selectAll(".barLabels").attr("opacity",0)
-
-                })
-
-                d3.selectAll(".barLabels")
-                .on("mouseover",function(){
-                    var idName = d3.select(this).attr("id")
-                    d3.selectAll("#"+idName).attr("opacity",1)
-                })
-                .on("mouseout",function(){
-                    var idName = d3.select(this).attr("id")
-                    d3.selectAll("#"+idName).attr("opacity",.4)
-                    d3.selectAll(".barLabels").attr("opacity",0)
-                })
-
-
-                d3.select("#startDateY")
+            d3.select("#succession")
                 .on("click",function(){
                     d3.selectAll(".y").style("background-color","#fff")
-                    d3.select(this).style("background-color","#aaa")
+                    d3.select(this).style("background-color",highlightColor)
+                    d3.selectAll(".bars")
+                        .each(function(d){
+                            d3.select(this).transition()
+                                .attr("y",(parseInt(d.successionIndex))*barOffset)
+                                //.attr("x",xScale(new Date(d.start)))
+
+                        })
+
+                        d3.selectAll(".barLabels")
+                         .each(function(d){
+                            d3.select(this).transition()
+                            .attr("y",(parseInt(d.successionIndex)+1)*barOffset-2)
+                           // .attr("x",xScale(new Date(d.start))+2)
+                        })
+                })
+            d3.select("#startDateY")
+                .on("click",function(){
+                    d3.selectAll(".y").style("background-color","#fff")
+                    d3.select(this).style("background-color",highlightColor)
                     d3.selectAll(".bars")
                         .each(function(d){
                             d3.select(this).transition()
                                 .attr("y",d.startRank*barOffset)
+                                .attr("x",xScale(new Date(d.start))+2)
+
                         })
                     d3.selectAll(".barLabels")
-                    .each(function(d){
+                         .each(function(d){
                             d3.select(this).transition()
-                                .attr("y",d.startRank*barOffset)
+                                .attr("y",(parseInt(d.startRank)+1)*barOffset-2)
+                                .attr("x",xScale(new Date(d.start))+d.days*pixelsPerDay+2)
+
                         })
                 })
 
-                d3.select("#length")
+            d3.select("#length")
                 .on("click",function(){
                     d3.selectAll(".y").style("background-color","#fff")
-                    d3.select(this).style("background-color","#aaa")
+                    d3.select(this).style("background-color",highlightColor)
                     d3.selectAll(".bars")
                         .each(function(d){
                             d3.select(this).transition()
-                                .attr("y",d.daysRank*barOffset)
+                                .attr("y",(d.daysRank)*barOffset)
+                              //  .attr("x",xScale(new Date(d.start))+2)
+
                         })
-                        d3.selectAll(".barLabels")
+
+                    d3.selectAll(".barLabels")
                         .each(function(d){
                             d3.select(this).transition()
-                                .attr("y",d.daysRank*barOffset)
+                                .attr("y",(parseInt(d.daysRank)+1)*barOffset-2)
+                               // .attr("x",xScale(new Date(d.start))+d.days*pixelsPerDay+2)
+
                         })
                 })
 
             d3.select("#startDateX")
                     .on("click",function(){
                         d3.selectAll(".x").style("background-color","#fff")
-                        d3.select(this).style("background-color","#aaa")
+                        d3.select(this).style("background-color",highlightColor)
                         var sorted = barData.sort(function(a,b){
-                        return new Date(a.start)-new Date(b.start)
+                        return new Date(b.start)-new Date(a.start)
                     })
                        d3.selectAll(".bars")
-                        .each(function(d){
+                        .each(function(d,i){
+                        //    console.log(d.days,pixelsPerDay)
+
                             d3.select(this).transition()
-                                .attr("x",xScale(new Date(d.start)))
+                           // .attr("y",d.daysRank*barOffset)
+                            .attr("x",xScale(new Date(d.start)))
                         })
                         d3.selectAll(".barLabels")
-                        .each(function(d){
+                        .each(function(d,i){
                             d3.select(this).transition()
-                                .attr("x",xScale(new Date(d.start)))
+                           // .attr("y",(parseInt(d.daysRank)+1)*barOffset-2)
+                            .attr("x",xScale(new Date(d.start))+d.days*pixelsPerDay+2)
                         })
+
+                        d3.selectAll(".yearsWorkedAxis").attr("visibility","hidden")
+                        d3.selectAll(".timelineAxis").attr("visibility","visible")
                     })
 
             d3.select("#compare")
                     .on("click",function(){
                         d3.selectAll(".x").style("background-color","#fff")
-                        d3.select(this).style("background-color","#aaa")
-                        d3.selectAll(".bars").transition()
-                        .attr("x",0)
+                        d3.select(this).style("background-color",highlightColor)
+                        d3.selectAll(".bars").transition().attr("x",0)
+
                         d3.selectAll(".barLabels").transition()
-                        .attr("x",function(d){return d.days/100})
+                            .attr("x",function(d,i){return d.days*pixelsPerDay+2})
+                        d3.selectAll(".yearsWorkedAxis").attr("visibility","visible")
+                        d3.selectAll(".timelineAxis").attr("visibility","hidden")
                     })
             })
 
@@ -194,22 +294,50 @@
                     return b[column]-a[column]
                 })
             }
-            
-            function formatWiki(wiki){
-                var formatted = []
 
+            function formatWiki(wiki,succession){
+                var successionArray = []
+                var successionLineDict = {}
+                for(var s in succession){
+                   // console.log(succession[s])
+                    if(s!="columns"){
+                        var line = Object.values(succession[s])
+                        .filter(Boolean)
+                        // .filter(function(d){
+                        //     return isNaN(d)
+                        // })
+                        var lineNumber = (+s+1)
+                        for(var l in line){
+                          //  console.log(lineNumber,line[l])d
+                            var nameKey = line[l].split(" ").join("_").split(".").join("")
+                            successionLineDict[nameKey]=s
+                            successionArray.push(line[l])
+                        }
+                    }
+                }
+               // console.log(successionLineDict)
+
+                var formatted = []
                 for(var w in wiki){
                     var name = wiki[w].name
                     if(name!=undefined){
-                      //  console.log(name)
+                        //console.log(name,successionArray.indexOf(name))
+                        // if(successionArray.indexOf(name)==-1){
+                        //     console.log(name)
+                        // }
                         var days = parseInt(wiki[w].days)
                         var startDate = wiki[w]["start date"]
-                        formatted.push({name:name,days:days,start:startDate})
-                    }
-                    
+                        var nameKey = name.split(" ").join("_").split(".").join("")
+
+                        formatted.push({name:name,
+                                days:days,
+                                start:startDate,
+                                successionIndex:successionArray.indexOf(name),
+                                successionLineNumber:successionLineDict[nameKey]})
+                    }   
                 }
                 sorted = formatted.sort(function(a,b){
-                    return new Date(a.start)-new Date(b.start)
+                    return new Date(b.start)-new Date(a.start)
                 })
                 for(var s in sorted){
                     sorted[s]["startRank"]=s
@@ -220,10 +348,10 @@
                 for(var s in sorted){
                     sorted[s]["daysRank"]=s
                 }
-
-              
-
+                
+                //console.log(sorted)
                 return sorted
+
             }
   </script>
   
