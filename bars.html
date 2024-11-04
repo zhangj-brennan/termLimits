@@ -217,14 +217,14 @@
                         .each(function(d){
                             d3.select(this).transition()
                                 .attr("y",d.startRank*barOffset)
-                                .attr("x",xScale(new Date(d.start))+2)
+                              //  .attr("x",xScale(new Date(d.start))+2)
 
                         })
                     d3.selectAll(".barLabels")
                          .each(function(d){
                             d3.select(this).transition()
                                 .attr("y",(parseInt(d.startRank)+1)*barOffset-2)
-                                .attr("x",xScale(new Date(d.start))+d.days*pixelsPerDay+2)
+                               // .attr("x",xScale(new Date(d.start))+d.days*pixelsPerDay+2)
 
                         })
                 })
