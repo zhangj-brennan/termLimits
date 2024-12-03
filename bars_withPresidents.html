@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="d3.v7.min.js" charset="utf-8"></script>
+<style>
+    body{
+        font-family:helvetica;
+        font-size:12px;
+    }
+    .toggle{
+        display:inline-block;
+        border:1px solid black;
+        padding:5px;
+        margin:2px;
+        cursor:pointer;
+    }
+    #startDateX{background-color:cyan}
+    #startDateY{background-color:cyan}
+    #chart{
+        position:absolute;
+        left:0px;
+        top:0px;
+        z-index:-1;
+
+    }
+    #controls{
+        position:absolute;
+        right:0px;
+        top:0px;
+        text-align:right;
+        z-index:1;
+    }
+    #tooltip{
+        position:absolute;
+        left:0px;
+        top:0;
+        visibility:visible;
+        z-index:2;
+        background-color:rgba(0,0,0,1);
+        color:white;
+        padding:5px;
+    }
+</style>
+</head>
+<body>
+    <div id="controls">
+        X AXIS
+        <div id="startDateX" class="toggle x">view as timeline</div>
+        <div id="compare" class="toggle x">view as bar chart</div>
+        Y AXIS
+        <div id="length" class="toggle y">sort by term length</div>
+        <div id="startDateY" class="toggle y">sort by start date</div>
+        <div id="endDateY" class="toggle y">by end time</div>
+        <div id="succession" class="toggle x y">view as succession lines</div>
+    </div>
+    <div id="chart"></div>
+<div id="tooltip"></div>
+
+  <script>
+
+    var minDate = new Date("October 5, 1789")
+    var maxDate = new Date()
+    var xMax = 600
+    var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,xMax])
+    var grid = 80
+    var yearlyRadiusOffset = 3
+    var color = "black"
+    var barColor = "red"
+
+    var highlightColor = "cyan"
+    var barWidth = 6
+    var barOffset = 8
+    var labelSize = 10
+    var opacity = .1
+    var barOpacity = 1
+    var colorScale = d3.scaleLinear().domain([1,18,19,30,35]).range(["#eee","#eee","orange","orange","red"])
+    var colorScale = d3.scaleThreshold().domain([18,32,40]).range(["#aaa","orange","red"])
+    var totalDays = (maxDate-minDate)/1000/24/60/60
+    var pixelsPerDay = xMax/totalDays
+    var daysScale = d3.scaleLinear().domain([0,40*365]).range([0,40*365*pixelsPerDay])
+
+    Promise.all([d3.csv("data/scotus_succession_flip.csv"),d3.csv("data/scotus_wiki.csv"),d3.csv("data/presidents.csv")])
+            .then(function(data){
+               // console.log(data)
+                var succession = data[0]
+                var wiki = data[1]
+                var presidents = data[2]
+            //    var formattedWiki = formatWiki(wiki,succession)
+                var svg = d3.select("#chart")
+                    .append("svg")
+                    .attr("width",xMax+200)
+                    .attr("height",1500)
+                    .append("g")
+                    .attr("transform","translate(30,80)")
+              drawPresidents(svg,presidents)
+
+                var barData = formatWiki(wiki,succession)
+
+                var timelineMarkers = [new Date("January 1, 1800"),new Date("January 1, 1900"),new Date("January 1, 2000"),new Date()]
+
+                    var timelineAxis = d3.axisTop().scale(xScale).ticks(2)
+                    .tickValues(timelineMarkers)
+                    .tickFormat(function(d,i){
+                        if(i == timelineMarkers.length-1){
+                            return "TODAY"
+                        }
+                        return d.getFullYear()
+                    })
+
+                    svg.append('g').call(timelineAxis).attr("class","timelineAxis")
+                    .attr("transform","translate(0,-10)").attr("visibility","visible")
+
+                    var daysMarkers = [0,365*10,365*20,365*30,365*40]
+
+                    var yearsWorkedAxis = d3.axisTop().scale(daysScale)
+                    .tickValues(daysMarkers)
+                    .tickFormat(function(d,i){
+                        return d/365+" yrs"
+                    })
+
+                    svg.append('g').attr("class","yearsWorkedAxis").call(yearsWorkedAxis)
+                    .attr("transform","translate(0,-10)").attr("visibility","hidden")
+
+            
+              svg.selectAll(".bars")
+                .data(barData)
+                .enter()
+                .append("rect")
+                .attr("y",function(d){
+                    return d.startRank*barOffset
+                })
+                .attr("x",function(d,i){
+                    return xScale(new Date(d.start))
+                })
+                .attr("class","bars")
+                .attr("id",function(d){
+                    //console.log(d.name)
+                    return d.name.split(" ").join("_")
+                    .split(".").join("")
+                    .split("\'").join("")
+                })
+                .attr("width",function(d,i){
+                    return d.days*pixelsPerDay})
+                .attr("height",barWidth)
+                .attr("opacity",barOpacity)
+                .attr("fill",function(d){
+                    console.log(d.name,d.days/365)
+                    return colorScale(d.days/365)
+                })
+                .style("cursor","pointer")
+                .on("mouseover",function(e,d){
+                       d3.select("#tooltip")
+                       .html("<b>"+d.name+"</b><br>start date: "+d.start+"<br>years served: "+Math.round(d.days/365*10)/10)
+                       .style("left", e.offsetX+10+ "px")
+                       .style("top", e.offsetY + "px")
+                       .style("visibility","visible")
+                    //   d3.select(this).attr("fill",highlightColor)
+                       
+                    })
+                    .on("mouseout",function(){
+                      //  d3.select(this).attr("fill",color)
+                        d3.select("#tooltip").html("")
+                        .style("visibility","hidden")
+
+                    })
+
+               // console.log(barData.length)
+            svg.selectAll(".barLabel")
+                .data(barData)
+                .enter()
+                .append("text")
+                .attr("class","barLabel")
+                .attr("x",function(d,i){
+                    
+                    return xScale(new Date(d.start))+d.days*pixelsPerDay+2
+                })
+                .attr("id",function(d){
+                    return d.name.split(" ").join("_").split(".").join("")
+                    .split("\'").join("")
+                })
+                .attr("class","barLabels")
+                .attr("y",function(d){return (parseInt(d.startRank)+1)*barOffset-2})
+                .text(function(d,i){
+                    var years = Math.round(d.days/365*10)/10
+                    return d.name//+" - "+years+" years"
+                })
+                .attr("fill",function(d,i){return colorScale(d.days/365)})
+                .attr("font-size",labelSize)
+
+
+            d3.select("#succession")
+                .on("click",function(){
+                    d3.selectAll(".y").style("background-color","#fff")
+                    d3.select(this).style("background-color",highlightColor)
+                    d3.selectAll(".bars")
+                        .each(function(d){
+                            d3.select(this).transition()
+                                .attr("y",(parseInt(d.successionIndex))*barOffset)
+                                //.attr("x",xScale(new Date(d.start)))
+
+                        })
+
+                        d3.selectAll(".barLabels")
+                         .each(function(d){
+                            d3.select(this).transition()
+                            .attr("y",(parseInt(d.successionIndex)+1)*barOffset-2)
+                           // .attr("x",xScale(new Date(d.start))+2)
+                        })
+                })
+            d3.select("#startDateY")
+                .on("click",function(){
+                    d3.selectAll(".y").style("background-color","#fff")
+                    d3.select(this).style("background-color",highlightColor)
+                    d3.selectAll(".bars")
+                        .each(function(d){
+                            d3.select(this).transition()
+                                .attr("y",d.startRank*barOffset)
+                              //  .attr("x",xScale(new Date(d.start))+2)
+
+                        })
+                    d3.selectAll(".barLabels")
+                         .each(function(d){
+                            d3.select(this).transition()
+                                .attr("y",(parseInt(d.startRank)+1)*barOffset-2)
+                               // .attr("x",xScale(new Date(d.start))+d.days*pixelsPerDay+2)
+
+                        })
+                })
+
+            d3.select("#length")
+                .on("click",function(){
+                    d3.selectAll(".y").style("background-color","#fff")
+                    d3.select(this).style("background-color",highlightColor)
+                    d3.selectAll(".bars")
+                        .each(function(d){
+                            d3.select(this).transition()
+                                .attr("y",(d.daysRank)*barOffset)
+                              //  .attr("x",xScale(new Date(d.start))+2)
+
+                        })
+
+                    d3.selectAll(".barLabels")
+                        .each(function(d){
+                            d3.select(this).transition()
+                                .attr("y",(parseInt(d.daysRank)+1)*barOffset-2)
+                               // .attr("x",xScale(new Date(d.start))+d.days*pixelsPerDay+2)
+
+                        })
+                })
+
+            d3.select("#startDateX")
+                    .on("click",function(){
+                        d3.selectAll(".x").style("background-color","#fff")
+                        d3.select(this).style("background-color",highlightColor)
+                        var sorted = barData.sort(function(a,b){
+                        return new Date(b.start)-new Date(a.start)
+                    })
+                       d3.selectAll(".bars")
+                        .each(function(d,i){
+                        //    console.log(d.days,pixelsPerDay)
+
+                            d3.select(this).transition()
+                           // .attr("y",d.daysRank*barOffset)
+                            .attr("x",xScale(new Date(d.start)))
+                        })
+                        d3.selectAll(".barLabels")
+                        .each(function(d,i){
+                            d3.select(this).transition()
+                           // .attr("y",(parseInt(d.daysRank)+1)*barOffset-2)
+                            .attr("x",xScale(new Date(d.start))+d.days*pixelsPerDay+2)
+                        })
+
+                        d3.selectAll(".yearsWorkedAxis").attr("visibility","hidden")
+                        d3.selectAll(".timelineAxis").attr("visibility","visible")
+                    })
+            d3.select("#endDateY")
+                    .on("click",function(){
+                        d3.selectAll(".y").style("background-color","#fff")
+                        d3.select(this).style("background-color",highlightColor)
+                    //     var sorted = barData.sort(function(a,b){
+                    //     return new Date(b.end)-new Date(a.end)
+                    // })
+                       d3.selectAll(".bars")
+                        .each(function(d,i){
+                            d3.select(this).transition()
+                            .attr("y",d.endRank*barOffset)
+                        })
+                        d3.selectAll(".barLabels")
+                        .each(function(d,i){
+                            d3.select(this).transition()
+                            .attr("y",d.endRank*barOffset+barOffset)
+                        })
+
+                        d3.selectAll(".yearsWorkedAxis").attr("visibility","hidden")
+                        d3.selectAll(".timelineAxis").attr("visibility","visible")
+                    })
+
+            d3.select("#compare")
+                    .on("click",function(){
+                        d3.selectAll(".x").style("background-color","#fff")
+                        d3.select(this).style("background-color",highlightColor)
+                        d3.selectAll(".bars").transition().attr("x",0)
+
+                        d3.selectAll(".barLabels").transition()
+                            .attr("x",function(d,i){return d.days*pixelsPerDay+2})
+                        d3.selectAll(".yearsWorkedAxis").attr("visibility","visible")
+                        d3.selectAll(".timelineAxis")
+                        .attr("visibility","hidden")
+                    })
+            })
+
+            function drawPresidents(svg,data){
+                console.log(data)
+                svg.selectAll(".presidents")
+                .data(data)
+                .enter()
+                .append("rect")
+                .attr("class","presidents")
+                .attr("x",function(d,i){
+                    var start = new Date("january 1,"+d.start)
+                    return xScale(start)
+                })
+                .attr("y",-10)
+                .attr("width",function(d,i){
+                    var start = new Date("january 1,"+d.start)
+                    var end = new Date("january 1,"+d.end)
+                    return (end-start)/1000/24/60/60*pixelsPerDay-1
+                })
+                .attr("height",10)
+                // .on('mouseover',function(e,d){
+                //     console.log(d)
+                // })
+
+
+            }
+            function sortBy(data,column){
+                var sorted = data.sort(function(a,b){
+                    return b[column]-a[column]
+                })
+            }
+
+            function formatWiki(wiki,succession){
+                var successionArray = []
+                var successionLineDict = {}
+                for(var s in succession){
+                   // console.log(succession[s])
+                    if(s!="columns"){
+                        var line = Object.values(succession[s])
+                        .filter(Boolean)
+                        // .filter(function(d){
+                        //     return isNaN(d)
+                        // })
+                        var lineNumber = (+s+1)
+                        for(var l in line){
+                          //  console.log(lineNumber,line[l])d
+                            var nameKey = line[l].split(" ").join("_").split(".").join("")
+                            successionLineDict[nameKey]=s
+                            successionArray.push(line[l])
+                        }
+                    }
+                }
+               // console.log(successionLineDict)
+
+                var formatted = []
+                for(var w in wiki){
+                    var name = wiki[w].name
+                    if(name!=undefined){
+                        //console.log(name,successionArray.indexOf(name))
+                        // if(successionArray.indexOf(name)==-1){
+                        //     console.log(name)
+                        // }
+                        var days = parseInt(wiki[w].days)
+                        var startDate = wiki[w]["start date"]
+                        var endDate = wiki[w]["end date"]
+                        var nameKey = name.split(" ").join("_").split(".").join("")
+
+                        formatted.push({name:name,
+                                days:days,
+                                start:startDate,
+                                end:endDate,
+                                successionIndex:successionArray.indexOf(name),
+                                successionLineNumber:successionLineDict[nameKey]})
+                    }   
+                }
+                sorted = formatted.sort(function(a,b){
+                    return new Date(b.start)-new Date(a.start)
+                })
+                for(var s in sorted){
+                    sorted[s]["startRank"]=s
+                }
+                sorted = formatted.sort(function(a,b){
+
+                    return new Date(b.end)-new Date(a.end)
+                })
+                for(var s in sorted){
+                    sorted[s]["endRank"]=s
+                }
+                var sorted = formatted.sort(function(a,b){
+                    return b.days-a.days
+                })
+                for(var s in sorted){
+                    sorted[s]["daysRank"]=s
+                }
+                
+                //console.log(sorted)
+                return sorted
+
+            }
+  </script>
+  
+</body>
+</html>

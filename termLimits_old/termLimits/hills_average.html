@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="d3.v7.min.js" charset="utf-8"></script>
+    <script src="http://d3js.org/d3.v7.min.js" charset="utf-8"></script>
 <style>
     body{
         font-family:helvetica;
@@ -16,25 +16,20 @@
 
     var minDate = new Date("October 5, 1789")
     var maxDate = new Date()
-    var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,500])
-    var grid = 70
+    var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,1400])
+    var grid = 80
     var yearlyRadiusOffset = 3
     var color = "magenta"
 
-    Promise.all([d3.csv("data/scotus_succession_flip.csv"),d3.csv("data/scotus_wiki.csv")])
+    Promise.all([d3.csv("scotus_succession_flip.csv"),d3.csv("scotus_wiki.csv")])
             .then(function(d){
                 var succession = d[0]
                 var wiki = d[1]
                 var formattedWiki = formatDict(wiki)
-                console.log(formattedWiki,wiki)
-                
+                //console.log(formattedWiki)
+                //console.log(succession)
 
-                var averageYearsOnBench = []
-                for(var y =1789; y<=2024; y++){
-                    var average = getYearsOnCourt(wiki,y)
-                    averageYearsOnBench.push({year:y,averageYearsOnBench:average})
-                }
-               // console.log(averageYearsOnBench)
+
 
                 var svg = d3.select("#chart")
                     .append("svg")
@@ -42,18 +37,6 @@
                     .attr("height",2000)
                     .append("g")
                     .attr("transform","translate(100,0)")
-
-                var yScale = d3.scaleLinear().domain([0,20]).range([0,150])
-                    svg.selectAll("rect").data(averageYearsOnBench)
-                    .enter()
-                    .append("rect")
-                    .attr("x",function(d,i){
-                        console.log(d.year, xScale(new Date("January 1, "+d.year)))
-                        return xScale(new Date("January 1, "+d.year))
-                    })
-                    .attr("y",500-yScale(d.averageYearsOnBench))
-                    .attr("width",2)
-                    .attr("height",function(d,i){return yScale(d.averageYearsOnBench)})
 
                 // var xAxis = d3.axisTop().scale(xScale)
                 // .tickValues([new Date("October 19, 1789"),new Date("January 1, 1800"),new Date("January 1, 1850"),new Date("January 1, 1900"),new Date("January 1, 1950"),new Date("January 1, 2000"),new Date()])
@@ -115,29 +98,7 @@
                     }                
                     
             })
-function getYearsOnCourt(wiki,year){
-   // var yearsOnCourt = {justices:[],average:0}
-    var sum = 0
-    var count = 0
-    for(var i in wiki){
-        var justiceData = wiki[i]
-        var justiceName = wiki[i].name
-        var startYear = new Date(justiceData["start date"]).getFullYear()	
-        var endYear = new Date(justiceData["end date"]).getFullYear()	
 
-        if(startYear<year && endYear>year){
-            var yearsOn = year-startYear
-            sum+=yearsOn
-            count+=1
-
-           // console.log(justiceName, yearsOn,startYear,year)
-        }
-
-    }
-    var average = sum/count
-   // console.log(sum,count,average)
-    return average
-}
     function drawRipple(seatNumber,wiki,startDate,endDate,days,svg,firstLast){
         var opacity = .1
 
