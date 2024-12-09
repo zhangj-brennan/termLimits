@@ -43,7 +43,7 @@
 </style>
 </head>
 <body>
-    <div id="controls">
+    <!-- <div id="controls">
         X AXIS
         <div id="startDateX" class="toggle x">view as timeline</div>
         <div id="compare" class="toggle x">view as bar chart</div>
@@ -51,24 +51,28 @@
         <div id="length" class="toggle y">sort by term length</div>
         <div id="startDateY" class="toggle y">sort by start date</div>
         <div id="succession" class="toggle x y">view as succession lines</div>
-    </div>
+    </div> -->
     <div id="chart"></div>
-<div id="tooltip"></div>
+    <div id="tooltip"></div>
+    <div id="tooltip2"></div>
 
   <script>
+    var newEndDate = "1/1/2036"
 
     var minDate = new Date("October 5, 1789")
-    var maxDate = new Date()
-    var xMax = 800
+    var maxDate = new Date(newEndDate )
+    var xMax = 1200
+    var yMax = 600
     var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,xMax])
     var grid = 80
     var yearlyRadiusOffset = 3
     var color = "black"
     var barColor = "black"
 
+
     var highlightColor = "cyan"
-    var barWidth = 3
-    var barOffset = 8
+    var barWidth = 2
+    var barOffset = 3
     var labelSize = 10
     var opacity = .1
     var barOpacity = 1
@@ -77,11 +81,14 @@
     var pixelsPerDay = xMax/totalDays
     var daysScale = d3.scaleLinear().domain([0,40*365]).range([0,40*365*pixelsPerDay])
 
-    Promise.all([d3.csv("scotus_succession_flip.csv"),d3.csv("scotus_wiki.csv")])
+    Promise.all([d3.csv("data/scotus_succession_flip.csv"),d3.csv("data/scotus_wiki.csv")])
             .then(function(data){
                // console.log(data)
                 var succession = data[0]
                 var wiki = data[1]
+
+                var averages = averageAgeTenure(wiki)
+
             //    var formattedWiki = formatWiki(wiki,succession)
                 var svg = d3.select("#chart")
                     .append("svg")
@@ -90,25 +97,98 @@
                     .append("g")
                     .attr("transform","translate(30,80)")
 
+                var ageChart = svg.append("g")
+                console.log(averages)
+
+                var ageScale = d3.scaleLinear().domain([40,80]).range([0,30])
+                ageChart
+                .selectAll(".age")
+                .data(averages)
+                .enter()
+                .append("rect")
+                .attr("class","age")
+                .attr("fill",function(d){
+                    if(d.averageAge>70){
+                        return "red"
+                    }
+                    return "black"
+                })
+                .attr("x",function(d){
+                   // console.log(d)
+                    return xScale(new Date(d.year))
+                })
+                .attr("height",function(d){
+                    return ageScale(d.averageAge)
+                })
+                .attr("width",2)
+                .attr("y",function(d){
+                    return yMax-ageScale(d.averageAge)
+                })
+
+                var tenureScale = d3.scaleLinear().domain([0,40]).range([0,30])
+                var tenureChart = svg.append("g")
+
+                tenureChart
+                .selectAll(".tenure")
+                .data(averages)
+                .enter()
+                .append("rect")
+                .attr("class","tenure")
+                .attr("fill",function(d){
+                    if(d.averageTenure>20){
+                        return "red"
+                    }
+                    return "black"
+                })
+                .attr("x",function(d){
+                   // console.log(d.averageTenure)
+                    return xScale(new Date(d.year))
+                })
+                .attr("height",function(d){
+                    return tenureScale(d.averageTenure)
+                })
+                .attr("width",2)
+                .attr("y",function(d){
+                    return yMax-tenureScale(d.averageTenure)-100
+                })
+                .on("mouseover",function(e,d){
+                       d3.select("#tooltip")
+                       .html(d.year+"Average age:"+Math.round(d.averageAge)+"<br>Average job age:"+Math.round(d.averageTenure))
+                       .style("left", e.offsetX+10+ "px")
+                       .style("top", e.offsetY + "px")
+                       .style("visibility","visible")
+                      // d3.select(this).attr("fill",highlightColor)
+                       
+                    })
+                    .on("mouseout",function(){
+                       // d3.select(this).attr("fill",color)
+                        d3.select("#tooltip").html("")
+                        .style("visibility","hidden")
+                    })
                 
+
                  
                 var barData = formatWiki(wiki,succession)
+                console.log(barData)
 
-                var timelineMarkers = [new Date("January 1, 1800"),new Date("January 1, 1900"),new Date("January 1, 2000"),new Date()]
+                var timelineMarkers = [new Date("January 1, 1800"),new Date("January 1, 1850"),new Date("January 1, 1950"),new Date("January 1, 2000"),new Date(),new Date(newEndDate)]
 
-                    var timelineAxis = d3.axisTop().scale(xScale).ticks(2)
+                    var timelineAxis = d3.axisTop().scale(xScale).tickSize(xMax)
                     .tickValues(timelineMarkers)
                     .tickFormat(function(d,i){
                        
                         if(i == timelineMarkers.length-1){
+                            return newEndDate 
+                        }
+                        if(i == timelineMarkers.length-2){
                             return "TODAY"
                         }
                         return d.getFullYear()
                     })
 
 
-                    svg.append('g').call(timelineAxis).attr("class","timelineAxis")
-                    .attr("transform","translate(0,-2)").attr("visibility","visible")
+                    svg.append('g').attr("class","timelineAxis").call(timelineAxis)
+                    .attr("transform","translate(0,"+xMax+")").attr("visibility","visible")
 
                     var daysMarkers = [0,365*10,365*20,365*30,365*40]
 
@@ -123,10 +203,11 @@
                     .attr("transform","translate(0,-2)").attr("visibility","hidden")
 
             
-              svg.selectAll("rect")
+              svg.selectAll("term")
                 .data(barData)
                 .enter()
                 .append("rect")
+                .attr("class","term")
                 .attr("y",function(d){
                     return d.startRank*barOffset
                 })
@@ -150,7 +231,10 @@
                 .style("cursor","pointer")
                 .on("mouseover",function(e,d){
                        d3.select("#tooltip")
-                       .html("<b>"+d.name+"</b><br>start date: "+d.start+"<br>years served: "+Math.round(d.days/365*10)/10)
+                       .html("<b>"+d.name+"</b><br>start date: "+d.start+"<br>years served: "+Math.round(d.days/365*10)/10
+                       +"<br> age at start: "+d.ageAtStart
+                       +"<br> age at end: "+d.ageAtEnd
+                    )
                        .style("left", e.offsetX+10+ "px")
                        .style("top", e.offsetY + "px")
                        .style("visibility","visible")
@@ -161,131 +245,6 @@
                         d3.select(this).attr("fill",color)
                         d3.select("#tooltip").html("")
                         .style("visibility","hidden")
-
-                    })
-
-               // console.log(barData.length)
-
-               
-            svg.selectAll(".barLabel")
-                .data(barData)
-                .enter()
-                .append("text")
-                .attr("class","barLabel")
-                .attr("x",function(d,i){
-                    
-                    return xScale(new Date(d.start))+d.days*pixelsPerDay+2
-                })
-                .attr("id",function(d){
-                    return d.name.split(" ").join("_").split(".").join("")
-                    .split("\'").join("")
-                })
-                .attr("class","barLabels")
-                .attr("y",function(d){return (parseInt(d.startRank)+1)*barOffset-2})
-                .text(function(d,i){
-                    var years = Math.round(d.days/365*10)/10
-                    return d.name//+" - "+years+" years"
-                })
-                .attr("fill","black")
-                .attr("font-size",labelSize)
-
-
-            d3.select("#succession")
-                .on("click",function(){
-                    d3.selectAll(".y").style("background-color","#fff")
-                    d3.select(this).style("background-color",highlightColor)
-                    d3.selectAll(".bars")
-                        .each(function(d){
-                            d3.select(this).transition()
-                                .attr("y",(parseInt(d.successionIndex))*barOffset)
-                                //.attr("x",xScale(new Date(d.start)))
-
-                        })
-
-                        d3.selectAll(".barLabels")
-                         .each(function(d){
-                            d3.select(this).transition()
-                            .attr("y",(parseInt(d.successionIndex)+1)*barOffset-2)
-                           // .attr("x",xScale(new Date(d.start))+2)
-                        })
-                })
-            d3.select("#startDateY")
-                .on("click",function(){
-                    d3.selectAll(".y").style("background-color","#fff")
-                    d3.select(this).style("background-color",highlightColor)
-                    d3.selectAll(".bars")
-                        .each(function(d){
-                            d3.select(this).transition()
-                                .attr("y",d.startRank*barOffset)
-                              //  .attr("x",xScale(new Date(d.start))+2)
-
-                        })
-                    d3.selectAll(".barLabels")
-                         .each(function(d){
-                            d3.select(this).transition()
-                                .attr("y",(parseInt(d.startRank)+1)*barOffset-2)
-                               // .attr("x",xScale(new Date(d.start))+d.days*pixelsPerDay+2)
-
-                        })
-                })
-
-            d3.select("#length")
-                .on("click",function(){
-                    d3.selectAll(".y").style("background-color","#fff")
-                    d3.select(this).style("background-color",highlightColor)
-                    d3.selectAll(".bars")
-                        .each(function(d){
-                            d3.select(this).transition()
-                                .attr("y",(d.daysRank)*barOffset)
-                              //  .attr("x",xScale(new Date(d.start))+2)
-
-                        })
-
-                    d3.selectAll(".barLabels")
-                        .each(function(d){
-                            d3.select(this).transition()
-                                .attr("y",(parseInt(d.daysRank)+1)*barOffset-2)
-                               // .attr("x",xScale(new Date(d.start))+d.days*pixelsPerDay+2)
-
-                        })
-                })
-
-            d3.select("#startDateX")
-                    .on("click",function(){
-                        d3.selectAll(".x").style("background-color","#fff")
-                        d3.select(this).style("background-color",highlightColor)
-                        var sorted = barData.sort(function(a,b){
-                        return new Date(b.start)-new Date(a.start)
-                    })
-                       d3.selectAll(".bars")
-                        .each(function(d,i){
-                        //    console.log(d.days,pixelsPerDay)
-
-                            d3.select(this).transition()
-                           // .attr("y",d.daysRank*barOffset)
-                            .attr("x",xScale(new Date(d.start)))
-                        })
-                        d3.selectAll(".barLabels")
-                        .each(function(d,i){
-                            d3.select(this).transition()
-                           // .attr("y",(parseInt(d.daysRank)+1)*barOffset-2)
-                            .attr("x",xScale(new Date(d.start))+d.days*pixelsPerDay+2)
-                        })
-
-                        d3.selectAll(".yearsWorkedAxis").attr("visibility","hidden")
-                        d3.selectAll(".timelineAxis").attr("visibility","visible")
-                    })
-
-            d3.select("#compare")
-                    .on("click",function(){
-                        d3.selectAll(".x").style("background-color","#fff")
-                        d3.select(this).style("background-color",highlightColor)
-                        d3.selectAll(".bars").transition().attr("x",0)
-
-                        d3.selectAll(".barLabels").transition()
-                            .attr("x",function(d,i){return d.days*pixelsPerDay+2})
-                        d3.selectAll(".yearsWorkedAxis").attr("visibility","visible")
-                        d3.selectAll(".timelineAxis").attr("visibility","hidden")
                     })
             })
 
@@ -294,6 +253,52 @@
                     return b[column]-a[column]
                 })
             }
+
+        function averageAgeTenure(wiki){
+            console.log(wiki)
+            var tenureTally = {}
+            var ageTally = {}
+
+            for(var year = 1780; year<2050; year++){
+                //console.log(year)
+              var currentYear = new Date("January 1,"+year)
+              ageTally[year]=[]
+             tenureTally[year]=[]
+                for(var i in wiki){
+                    var birth = new Date("January 1,"+wiki[i].birth)
+                    var startDate = new Date(wiki[i]["start date"])
+                    var endDate = new Date(wiki[i]["end date"])
+                    if(wiki[i]["end date"] =="10/24/2024"){
+                        endDate  = new Date(newEndDate)
+                    }
+                    if(currentYear<endDate && currentYear>startDate){
+                        var age = (currentYear-birth)/1000/60/60/24/365
+                        var tenure = (currentYear-startDate)/1000/60/60/24/365
+                        ageTally[year].push(age)
+                        tenureTally[year].push(tenure)
+
+                    }
+                   // console.log(wiki[i].birth, birth)
+             }
+            }
+            console.log(ageTally)
+            var averages = []
+            function add(accumulator, a) {
+             return accumulator + a;
+            }
+            for(var a in ageTally){
+              //  console.log(a)
+                var ageSum = ageTally[a].reduce(add,0)
+                var tenureSum = tenureTally[a].reduce(add,0)
+                var averageAge = ageSum/ageTally[a].length
+                var averageTenure = tenureSum/tenureTally[a].length
+
+                averages.push({year:a,averageAge:averageAge,averageTenure:averageTenure})
+            }
+            console.log(averages)
+         return averages   
+        }
+       
 
             function formatWiki(wiki,succession){
                 var successionArray = []
@@ -326,12 +331,25 @@
                         //     console.log(name)
                         // }
                         var days = parseInt(wiki[w].days)
+                        var birthYear = parseInt(wiki[w].birth)
                         var startDate = wiki[w]["start date"]
                         var nameKey = name.split(" ").join("_").split(".").join("")
+                        var endDate = wiki[w]["end date"]
+                        var ageAtStart = (new Date(startDate)-new Date("January 1,"+birthYear))/1000/60/60/24/365
+
+                        var ageAtEnd = (new Date(endDate)-new Date("January 1,"+birthYear))/1000/60/60/24/365
+                        if(endDate=="10/24/2024" && name != "Clarence Thomas"){
+                            endDate = newEndDate 
+                            days = (new Date(endDate)-new Date(startDate))/1000/60/60/24
+                            ageAtEnd = (new Date(endDate)-new Date("January 1,"+birthYear))/1000/60/60/24/365
+                        }
 
                         formatted.push({name:name,
                                 days:days,
+                                ageAtEnd:ageAtEnd,
+                                ageAtStart:ageAtStart,
                                 start:startDate,
+                                end:endDate,
                                 successionIndex:successionArray.indexOf(name),
                                 successionLineNumber:successionLineDict[nameKey]})
                     }   
