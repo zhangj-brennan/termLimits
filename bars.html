@@ -3,33 +3,21 @@
 <head>
     <script src="d3.v7.min.js" charset="utf-8"></script>
 <style>
-    body{
-        font-family:helvetica;
-        font-size:12px;
-    }
-    .toggle{
-        display:inline-block;
-        border:1px solid black;
-        padding:5px;
-        margin:2px;
-        cursor:pointer;
-    }
-    #startDateX{background-color:cyan}
-    #startDateY{background-color:cyan}
-    #chart{
-        position:absolute;
-        left:0px;
-        top:0px;
-        z-index:-1;
+    @font-face {
+            font-family: "bc";
+            src: url("Benton Sans/Benton Sans Regular.otf") format("truetype");
+        }
 
-    }
-    #controls{
-        position:absolute;
-        right:0px;
-        top:0px;
-        text-align:right;
-        z-index:1;
-    }
+        body{
+            font-family:bc;
+            font-size:.9em;
+        }
+        
+        svg text{
+            font-family:bc;
+            font-size:.9em;
+        }
+   
     #tooltip{
         position:absolute;
         left:0px;
@@ -61,8 +49,12 @@
 
     var minDate = new Date("October 5, 1789")
     var maxDate = new Date(newEndDate )
-    var xMax = 1200
-    var yMax = 600
+    var barWidth = 4
+    var barOffset = 5
+    var xMax = 700
+    var p = 80
+    var yMax = barOffset*121
+
     var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,xMax])
     var grid = 80
     var yearlyRadiusOffset = 3
@@ -71,8 +63,7 @@
 
 
     var highlightColor = "cyan"
-    var barWidth = 2
-    var barOffset = 3
+
     var labelSize = 10
     var opacity = .1
     var barOpacity = 1
@@ -81,6 +72,31 @@
     var pixelsPerDay = xMax/totalDays
     var daysScale = d3.scaleLinear().domain([0,40*365]).range([0,40*365*pixelsPerDay])
 
+
+function getRollingAverage(data,roll){
+    var formatted = []
+
+    for(var d in data){
+        var year = parseInt(data[d].year)+roll
+        if(year<2036){
+            var totalAge = 0
+        var totalTenure = 0
+        for(var r =0; r<roll;r++){
+            
+            totalAge += data[+d+parseInt(r)].averageAge
+            totalTenure += data[+d+parseInt(r)].averageTenure
+        }
+        var averageAge = totalAge/roll
+        var averageTenure = totalTenure/roll
+        //console.log(data[d],roll,averageAge,averageTenure,year)
+        var rolledYear = {year:year,averageAge:averageAge,averageTenure:averageTenure}
+        formatted.push(rolledYear)
+        }
+       
+    }
+    return formatted
+}
+
     Promise.all([d3.csv("data/scotus_succession_flip.csv"),d3.csv("data/scotus_wiki.csv")])
             .then(function(data){
                // console.log(data)
@@ -88,6 +104,11 @@
                 var wiki = data[1]
 
                 var averages = averageAgeTenure(wiki)
+                console.log(averages)
+
+                var rollingAverages = getRollingAverage(averages,10)
+
+                console.log(rollingAverages)
 
             //    var formattedWiki = formatWiki(wiki,succession)
                 var svg = d3.select("#chart")
@@ -95,100 +116,94 @@
                     .attr("width",xMax+200)
                     .attr("height",2000)
                     .append("g")
-                    .attr("transform","translate(30,80)")
+                    .attr("transform","translate("+p+","+p+")")
 
                 var ageChart = svg.append("g")
-                console.log(averages)
+                ageChart.append("text").text("AVERAGE AGE").attr("x",0).attr("y",10)
+                var ageScale = d3.scaleLinear().domain([40,80]).range([p,0])
+                var ageAxis = d3.axisLeft().scale(ageScale).ticks(1).tickSize(xMax).tickValues([70])
+                .tickFormat(function(d){return d+" years"})
 
-                var ageScale = d3.scaleLinear().domain([40,80]).range([0,30])
-                ageChart
-                .selectAll(".age")
-                .data(averages)
-                .enter()
-                .append("rect")
-                .attr("class","age")
-                .attr("fill",function(d){
-                    if(d.averageAge>70){
-                        return "red"
-                    }
-                    return "black"
-                })
-                .attr("x",function(d){
-                   // console.log(d)
-                    return xScale(new Date(d.year))
-                })
-                .attr("height",function(d){
-                    return ageScale(d.averageAge)
-                })
-                .attr("width",2)
-                .attr("y",function(d){
-                    return yMax-ageScale(d.averageAge)
-                })
+                ageChart.append("g").call(ageAxis).attr("transform","translate("+xMax+",0)").attr("opacity",1)
 
-                var tenureScale = d3.scaleLinear().domain([0,40]).range([0,30])
-                var tenureChart = svg.append("g")
 
-                tenureChart
-                .selectAll(".tenure")
-                .data(averages)
-                .enter()
-                .append("rect")
-                .attr("class","tenure")
-                .attr("fill",function(d){
-                    if(d.averageTenure>20){
-                        return "red"
-                    }
-                    return "black"
-                })
-                .attr("x",function(d){
-                   // console.log(d.averageTenure)
-                    return xScale(new Date(d.year))
-                })
-                .attr("height",function(d){
-                    return tenureScale(d.averageTenure)
-                })
-                .attr("width",2)
-                .attr("y",function(d){
-                    return yMax-tenureScale(d.averageTenure)-100
-                })
-                .on("mouseover",function(e,d){
-                       d3.select("#tooltip")
-                       .html(d.year+"Average age:"+Math.round(d.averageAge)+"<br>Average job age:"+Math.round(d.averageTenure))
-                       .style("left", e.offsetX+10+ "px")
-                       .style("top", e.offsetY + "px")
-                       .style("visibility","visible")
-                      // d3.select(this).attr("fill",highlightColor)
-                       
-                    })
-                    .on("mouseout",function(){
-                       // d3.select(this).attr("fill",color)
-                        d3.select("#tooltip").html("")
-                        .style("visibility","hidden")
-                    })
                 
+                
+                var tenureScale = d3.scaleLinear().domain([0,40]).range([p,0])
+                var tenureChart = svg.append("g")
+                ageChart.append("path")
+                .datum(averages)
+                .attr("fill", "none")
+                .attr("stroke", "black")
+                .attr("stroke-width", 1.5)
+                .attr("d",d3.line()
+                .x(function(d){return xScale(new Date(d.year))})
+                .y(function(d,i){return tenureScale(d.averageAge)})   
+                )
+                .attr("transform","translate(0,"+p+")")
+                .attr("opacity",1)
+
+                // ageChart.append("path")
+                // .datum(rollingAverages)
+                // .attr("fill", "none")
+                // .attr("stroke", "black")
+                // .attr("stroke-width", 1.5)
+                // .attr("d",d3.line()
+                // .x(function(d){return xScale(new Date(String(d.year)))})
+                // .y(function(d,i){return tenureScale(d.averageAge)})   
+                // )
+                // .attr("transform","translate(0,"+p+")")
+                // .attr("opacity",.5)
+
+
+                 var tenureScale = d3.scaleLinear().domain([0,30]).range([p,0])
+                 var tenureChart = svg.append("g") .attr("transform","translate(0,"+(p*1.5)+")")
+                 tenureChart.append("text").text("AVERAGE WORK AGE").attr("x",0).attr("y",10)
+
+                 var tenureAxis = d3.axisLeft().scale(tenureScale).ticks(1).tickSize(xMax).tickValues([20])
+                 .tickFormat(function(d){return d+" years"})
+                 tenureChart.append("g").call(tenureAxis).attr("transform","translate("+xMax+",0)").attr("opacity",1)
+                 d3.selectAll(".domain").attr("opacity",0)
+                //  tenureChart.append('rect').attr("x",0).attr("y",tenureScale(20)-27)
+                // .attr("width",xMax).attr("height",27)
+                // .attr("fill","#FFCF01")
+
+                tenureChart.append("path")
+                .datum(averages)
+                .attr("fill", "none")
+                .attr("stroke", "black")
+                .attr("stroke-width", 1.5)
+                .attr("d",d3.line()
+                .x(function(d){return xScale(new Date(d.year))})
+                .y(function(d,i){return tenureScale(d.averageTenure)})
+                )               
+                .attr("opacity",1)
+
+                // tenureChart.append("path")
+                // .datum(rollingAverages)
+                // .attr("fill", "none")
+                // .attr("stroke", "black")
+                // .attr("stroke-width", 1)
+                // .attr("d",d3.line()
+                // .x(function(d,i){return xScale(new Date(String(d.year)))})
+                // .y(function(d,i){return tenureScale(d.averageTenure)})
+                // )               
+                // .attr("opacity",.3)
 
                  
                 var barData = formatWiki(wiki,succession)
-                console.log(barData)
+                //console.log(barData)
 
-                var timelineMarkers = [new Date("January 1, 1800"),new Date("January 1, 1850"),new Date("January 1, 1950"),new Date("January 1, 2000"),new Date(),new Date(newEndDate)]
+                var timelineMarkers = [new Date("January 1, 1790"),new Date("January 1, 2000"),new Date("January 1, 2024"),new Date(newEndDate)]
 
-                    var timelineAxis = d3.axisTop().scale(xScale).tickSize(xMax)
+                    var timelineAxis = d3.axisTop().scale(xScale).tickSize(5)
                     .tickValues(timelineMarkers)
                     .tickFormat(function(d,i){
-                       
-                        if(i == timelineMarkers.length-1){
-                            return newEndDate 
-                        }
-                        if(i == timelineMarkers.length-2){
-                            return "TODAY"
-                        }
                         return d.getFullYear()
                     })
 
-
                     svg.append('g').attr("class","timelineAxis").call(timelineAxis)
-                    .attr("transform","translate(0,"+xMax+")").attr("visibility","visible")
+                    .attr("transform","translate(0,"+(p*3)+")").attr("visibility","visible")
 
                     var daysMarkers = [0,365*10,365*20,365*30,365*40]
 
@@ -203,7 +218,10 @@
                     .attr("transform","translate(0,-2)").attr("visibility","hidden")
 
             
-              svg.selectAll("term")
+             var termsBars = svg.append("g").attr("transform","translate(0,"+p*3+")")
+             termsBars.append("text").text("JUSTICE TERMS").attr("x",0).attr("y",40)
+
+             termsBars.selectAll("term")
                 .data(barData)
                 .enter()
                 .append("rect")
@@ -255,11 +273,10 @@
             }
 
         function averageAgeTenure(wiki){
-            console.log(wiki)
             var tenureTally = {}
             var ageTally = {}
 
-            for(var year = 1780; year<2050; year++){
+            for(var year = 1790; year<2035; year++){
                 //console.log(year)
               var currentYear = new Date("January 1,"+year)
               ageTally[year]=[]
@@ -281,7 +298,6 @@
                    // console.log(wiki[i].birth, birth)
              }
             }
-            console.log(ageTally)
             var averages = []
             function add(accumulator, a) {
              return accumulator + a;
@@ -295,7 +311,6 @@
 
                 averages.push({year:a,averageAge:averageAge,averageTenure:averageTenure})
             }
-            console.log(averages)
          return averages   
         }
        
