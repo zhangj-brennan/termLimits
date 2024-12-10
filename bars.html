@@ -40,6 +40,8 @@
         <div id="startDateY" class="toggle y">sort by start date</div>
         <div id="succession" class="toggle x y">view as succession lines</div>
     </div> -->
+    Age/Tenure of court 3 presidential terms into the future<br>
+    even if Clarence Thomas left court today.
     <div id="chart"></div>
     <div id="tooltip"></div>
     <div id="tooltip2"></div>
@@ -250,8 +252,8 @@ function getRollingAverage(data,roll){
                 .on("mouseover",function(e,d){
                        d3.select("#tooltip")
                        .html("<b>"+d.name+"</b><br>start date: "+d.start+"<br>years served: "+Math.round(d.days/365*10)/10
-                       +"<br> age at start: "+d.ageAtStart
-                       +"<br> age at end: "+d.ageAtEnd
+                       +"<br> age at start: "+Math.round(d.ageAtStart)
+                       +"<br> age at end: "+Math.round(d.ageAtEnd)
                     )
                        .style("left", e.offsetX+10+ "px")
                        .style("top", e.offsetY + "px")
