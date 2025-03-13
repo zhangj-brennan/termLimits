@@ -60,7 +60,7 @@
 
     var minDate = new Date("October 5, 1789")
     var maxDate = new Date()
-    var xMax = 600
+    var xMax = 2000
     var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,xMax])
     var grid = 80
     var yearlyRadiusOffset = 3
@@ -327,9 +327,29 @@
                     return (end-start)/1000/24/60/60*pixelsPerDay-1
                 })
                 .attr("height",10)
-                // .on('mouseover',function(e,d){
-                //     console.log(d)
-                // })
+
+                svg.selectAll(".presidentLabel")
+                .data(data)
+                .enter()
+                .append("text")
+                .attr("class","presidentLabel")
+                .attr("x",function(d,i){
+                    var start = new Date("january 1,"+d.start)
+                    return xScale(start)
+                })
+                .attr("y",-10)
+                .attr("width",function(d,i){
+                    var start = new Date("january 1,"+d.start)
+                    var end = new Date("january 1,"+d.end)
+                    return (end-start)/1000/24/60/60*pixelsPerDay-1
+                })
+                .attr("height",10)
+                .text(function(d){
+                    var presidentLast = d.president.split(" ")[d.president.split(" ").length-1]
+                    console.log(presidentLast)
+                    return presidentLast
+                        })
+              
 
 
             }

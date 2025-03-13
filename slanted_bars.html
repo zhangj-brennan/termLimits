@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="d3.v7.min.js" charset="utf-8"></script>
+<style>
+    @font-face {
+            font-family: "bc";
+            src: url("Benton Sans/Benton Sans Medium.otf") format("truetype");
+        }
+
+        @font-face {
+            font-family: "bcBOLD";
+            src: url("Benton Sans/Benton Sans Black.otf") format("truetype");
+        }
+
+        body{
+            font-family:bc;
+            font-size:.9em;
+        }
+        
+        svg text{
+            font-family:bc;
+            font-size:.85em;
+        }
+   
+    #tooltip{
+        position:absolute;
+        left:0px;
+        top:0;
+        visibility:visible;
+        z-index:2;
+        color:black;
+        background-color:white;
+        padding:5px;
+        font-family:bc;
+        font-size:.85em;
+    }
+    #title{
+        font-family:bcBOLD;
+        font-size:3em;
+    }
+</style>
+</head>
+<body>
+    <!-- <div id="controls">
+        X AXIS
+        <div id="startDateX" class="toggle x">view as timeline</div>
+        <div id="compare" class="toggle x">view as bar chart</div>
+        Y AXIS
+        <div id="length" class="toggle y">sort by term length</div>
+        <div id="startDateY" class="toggle y">sort by start date</div>
+        <div id="succession" class="toggle x y">view as succession lines</div>
+    </div> -->
+    <div id="title">A VERY DETAILED TIMELINE</div>
+    <div id="chart"></div>
+    <div id="tooltip"></div>
+
+    <defs>
+        <filter x="0" y="0" width="1" height="1" id="solid">
+          <feFlood flood-color="yellow" result="bg" />
+          <feMerge>
+            <feMergeNode in="bg"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+
+  <script>
+    var newEndDate = "1/1/2032"
+
+    var minDate = new Date("October 5, 1789")
+    var maxDate = new Date(newEndDate )
+    var barWidth = 12
+    var barOffset = 5
+    var xMax = 5000
+    var labelRotate =-18
+
+    var p = 10
+    var yMax = barOffset*121
+
+    var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,xMax])
+    var grid = 80
+    var yearlyRadiusOffset = 3
+    var color = "black"
+    var barColor = "black"
+
+
+
+    var highlightColor = "red"
+
+    var labelSize = 10
+    var opacity = .1
+    var barOpacity = 1
+    var colorScale = d3.scaleLinear().domain([10,20]).range([color,barColor])
+    var totalDays = (maxDate-minDate)/1000/24/60/60
+    var pixelsPerDay = xMax/totalDays
+    var daysScale = d3.scaleLinear().domain([0,40*365]).range([0,40*365*pixelsPerDay])
+
+
+function getRollingAverage(data,roll){
+    var formatted = []
+
+    for(var d in data){
+        var year = parseInt(data[d].year)+roll
+        if(year<2036){
+            var totalAge = 0
+        var totalTenure = 0
+        for(var r =0; r<roll;r++){
+            
+            totalAge += data[+d+parseInt(r)].averageAge
+            totalTenure += data[+d+parseInt(r)].averageTenure
+        }
+        var averageAge = totalAge/roll
+        var averageTenure = totalTenure/roll
+        //console.log(data[d],roll,averageAge,averageTenure,year)
+        var rolledYear = {year:year,averageAge:averageAge,averageTenure:averageTenure}
+        formatted.push(rolledYear)
+        }
+       
+    }
+    return formatted
+}
+function getActiveByYear(year,wiki){
+
+//console.log(year.getFullYear())
+
+var active = []
+
+for(var i in wiki){
+  //  console.log(wiki[i])
+    var start = new Date(wiki[i]["start date"])
+    var end = new Date(wiki[i]["end date"])
+    if(start<year && end>year){
+        active.push(wiki[i])
+    }
+}
+return active
+}
+var textOffset = 10
+var offsets = {
+"Thomas Johnson":26,
+"John Blair Jr.":12,
+"Samuel Chase":0,
+"James Wilson":-6,
+"William Paterson":-22,
+"Oliver Ellsworth":-12,
+"Alfred Moore":10,
+"Joseph Story":4,
+"Henry Baldwin":-6,
+"Philip P. Barbour":2,
+"John McLean":-7,
+"John Catron":-10,
+"Levi Woodbury":2,
+"Nathan Clifford":6,
+"Salmon P. Chase":10,
+"David Davis":4,
+"Stephen Johnson Field":2,
+"Samuel Freeman Miller":-5,
+"Morrison Waite":-15,
+"William Burnham Woods":12,
+"Lucius Quintus Cincinnatus Lamar":-6,
+"George Shiras Jr.":10,
+"Howell Edmunds Jackson":2,
+"John Marshall Harlan":-10,
+"David J. Brewer":-6,
+"Rufus W. Peckham":-10,
+"Edward Douglass White1":-8,
+"Edward Douglass White2":-8,
+"Louis Brandeis":20,
+"Joseph Rucker Lamar":18,
+"William Henry Moody":10,
+"John Hessin Clarke":8,
+"Charles Evans Hughes2":-16,
+"Charles Evans Hughes1":-16,
+"Mahlon Pitney":-12,
+"Pierce Butler":-10,
+"Edward Terry Sanford":-6,
+"James Clark McReynolds":4,
+"George Sutherland":-4,
+"James Frances Byrnes":12,
+"Charles Evans Whittaker":-18,
+"Tom C. Clark":-20,
+"John Marshall Harlan II":-10,
+"William O. Douglas":-6,
+"Wiley Blount Rutledge":-18,
+"Robert H. Jackson":-18,
+"Sherman Minton":-18,
+"Frank Murphy":-8,
+"Fred M. Vinson":2,
+"William J. Brennan Jr.":4,
+"Abe Fortas":-14,
+"Arthur Goldberg":-12,
+"Harry Blackmun":-16,
+"Lewis F. Powell Jr.":-14,
+"Warren E. Burger":2,
+"Antonin Scalia":9,
+"David Souter":-4,
+"Sonia Sotomayor":6
+}
+
+function drawActive(active,svg){
+    console.log(active)
+    d3.selectAll(".active").remove()
+
+    svg.selectAll(".active")
+    .data(active)
+    .enter()
+    .append("circle")
+    .attr("class","active")
+    .attr("cy",function(d,i){console.log(d); return i*20})
+    .attr("width",20)
+    .attr("cx",function(d){return xScale(new Date(d["start date"]))})
+    //.attr("width",function(d){return d.days*pixelsPerDay })
+}
+
+
+    Promise.all([d3.csv("data/scotus_succession_flip.csv"),d3.csv("data/scotus_wiki.csv")])
+            .then(function(data){
+               // console.log(data)
+                var succession = data[0]
+                var wiki = data[1]
+
+                var averages = averageAgeTenure(wiki)
+               // console.log(averages)
+//
+              //  var rollingAverages = getRollingAverage(averages,10)
+
+               // console.log(rollingAverages)
+
+
+                
+
+            //    var formattedWiki = formatWiki(wiki,succession)
+                var svg = d3.select("#chart")
+                    .append("svg")
+                    .attr("width",xMax+200)
+                    .attr("height",700)
+                    .append("g")
+                    .attr("transform","translate("+p+","+p+")")
+
+                    svg.append("rect").attr("x",40).attr("y",20).attr("width",12).attr("height",12).attr("fill","#ED1C24")
+                    .attr("opacity",0.5)
+
+                    svg.append("rect").attr("x",40).attr("y",40).attr("width",12).attr("height",12).attr("fill","#007194")
+                    .attr("opacity",0.5)
+
+                    svg.append("text").attr("x",55).attr("y",30).text("average age").attr("fill","#ED1C24")
+                    svg.append("text").attr("x",55).attr("y",50).text("average tenure").attr("fill","#007194")
+            //    var overlay = svg.append("g").append("rect").attr("x",0).attr("y",0).attr("width",xMax).attr("height",500)//.attr("opacity",.5).attr("fill","blue")
+
+                // var mouseBar = svg.append("g").append("rect").attr("x",10).attr("y",0).attr("width",5).attr("height",250).attr("opacity",.5).attr("fill","gold")
+                // .attr("id","timeMarker")
+
+
+                // overlay.on("mousemove",function(e){
+                //   mouseBar.attr("x",d3.pointer(e)[0])
+                  
+                //   var year = new Date(xScale.invert(d3.pointer(e)[0]))
+                //   var active = getActiveByYear(year,wiki)
+                //   drawActive(active,svg)
+                // })
+
+                
+              //   ageChart.append("text").text("AVERAGE AGE").attr("x",80).attr("y",10)
+                 var ageScale = d3.scaleLinear().domain([0,100]).range([600,0])
+                 var ageAxis = d3.axisLeft().scale(ageScale).ticks(1).tickSize(xMax).tickValues([0,30,60])
+                 .tickFormat(function(d){return d+" years"})
+                 var ageChart = svg.append("g").attr("transform","translate(15,10)")
+           //      ageChart.append("g").call(ageAxis)//.attr("transform","translate("+xMax+",0)").attr("opacity",1)
+
+
+                
+                
+                 //var tenureScale = d3.scaleLinear().domain([0,40]).range([p,0])
+                // var tenureChart = svg.append("g")
+                // ageChart.append("path")
+                // .datum(averages)
+                // .attr("fill", "red")
+                // .attr("stroke", "black")
+                // .attr("stroke-width", 1.5)
+                // .attr("d",d3.line()
+                //      .x(function(d){return xScale(new Date(d.year))})
+                //     .y(function(d,i){return ageScale(d.averageAge)})   
+                // )
+                // .attr("transform","translate(0,"+p+")")
+                // .attr("opacity",.1)
+
+                // ageChart.append("path")
+                // .datum(averages)
+                // .attr("fill", "yellow")
+                // .attr("stroke", "black")
+                // .attr("stroke-width", 1.5)
+                // .attr("d",d3.line()
+                // .x(function(d){return xScale(new Date(String(d.year)))})
+                // .y(function(d,i){return ageScale(d.averageTenure)})   
+                // )
+                // .attr("transform","translate(0,"+p+")")
+                // .attr("opacity",.5)
+
+                // ageChart.selectAll(".tenureCircle")
+                // .data(averages)
+                // .enter()
+                // .append("circle")
+                // .attr("fill", "black")
+                // .attr("stroke-width", 1.5)
+                // .attr("cx",function(d){return xScale(new Date(String(d.year)))})
+                // .attr("cy",function(d,i){return ageScale(d.averageTenure)})   
+                // .attr("r",2)
+                // .attr("transform","translate(0,"+p+")")
+                // .attr("opacity",1)
+                // .on("mouseover",function(e,d){
+                //     console.log(d)
+                // })
+
+
+                var tenureColor = d3.scaleLinear().domain([1,30]).range(["#fff","#00415B"])
+                var ageColor = d3.scaleLinear().domain([50,90]).range(["#fff","#ED1C24"])
+
+                ageChart.selectAll(".ageBar")
+                .data(averages)
+                .enter()
+                .append("rect")
+                .attr("fill", function(d){return ageColor(d.averageAge)})
+                .attr("stroke-width", 1.5)
+                .attr("x",function(d){return xScale(new Date(String(d.year)))})
+                .attr("y",function(d,i){return ageScale(d.averageAge)})   
+                .attr("width",barWidth)
+                .attr("height",function(d,i){return 600-ageScale(d.averageAge)})   
+                .attr("r",2)
+                .attr("transform","translate(0,"+p+")")
+                .attr("opacity",1)
+                .attr("cursor","pointer")
+                .on("mouseover",function(e,d){
+                    d3.select("#_age_"+d.year).attr("opacity",1)
+                })
+                .on("mouseout",function(e,d){
+                    d3.select("#_age_"+d.year).attr("opacity",0)
+                })
+                .attr("opacity",0.3)
+
+
+                ageChart.selectAll(".tenureBar")
+                .data(averages)
+                .enter()
+                .append("text")
+                .attr("fill", "red")
+                .attr("stroke-width", 1.5)
+                .attr("id",function(d){
+                    return "_age_"+d.year
+                })
+                .attr("x",function(d){return xScale(new Date(String(d.year)))+5})
+                .attr("y",function(d,i){return ageScale(d.averageAge)-2})   
+                // .attr("width",20)
+                // .attr("height",function(d,i){return 600-ageScale(d.averageTenure)})   
+                // .attr("r",2)
+                .text(function(d){
+                    return Math.round(d.averageAge)
+                })
+                .attr("text-anchor","middle")
+                .attr("transform","translate(0,"+p+")")
+                .attr("opacity",0)
+                .style("font-size","9px")
+
+
+                ageChart.selectAll(".tenureBar")
+                .data(averages)
+                .enter()
+                .append("rect")
+                .attr("fill", function(d){return tenureColor(d.averageTenure)})
+                .attr("stroke-width", 1.5)
+                .attr("x",function(d){return xScale(new Date(String(d.year)))})
+                .attr("y",function(d,i){return ageScale(d.averageTenure)})   
+                .attr("width",barWidth)
+                .attr("height",function(d,i){return 600-ageScale(d.averageTenure)})   
+                .attr("r",2)
+                .attr("transform","translate(0,"+p+")")
+                .attr("opacity",1)
+                .attr("cursor","pointer")
+                .on("mouseover",function(e,d){
+                    d3.select("#_tenure_"+d.year).attr("opacity",1)
+                })
+                .on("mouseout",function(e,d){
+                    d3.select("#_tenure_"+d.year).attr("opacity",0)
+                })
+
+                ageChart.selectAll(".tenureBar")
+                .data(averages)
+                .enter()
+                .append("text")
+                .attr("fill", "#007194")
+                .attr("stroke-width", 1.5)
+                .attr("id",function(d){
+                    return "_tenure_"+d.year
+                })
+                .attr("x",function(d){return xScale(new Date(String(d.year)))+5})
+                .attr("y",function(d,i){return ageScale(d.averageTenure)-2})   
+                // .attr("width",20)
+                // .attr("height",function(d,i){return 600-ageScale(d.averageTenure)})   
+                // .attr("r",2)
+                .text(function(d){
+                    return Math.round(d.averageTenure)
+                })
+                .attr("text-anchor","middle")
+                .attr("transform","translate(0,"+p+")")
+                .attr("opacity",0)
+                .style("font-size","10px")
+                
+
+                //  var tenureScale = d3.scaleLinear().domain([0,30]).range([p,0])
+                //  var tenureChart = svg.append("g") .attr("transform","translate(0,"+(p*1.5)+")")
+                //  tenureChart.append("text").text("AVERAGE WORK AGE").attr("x",-120).attr("y",40)
+
+                //  var tenureAxis = d3.axisLeft().scale(tenureScale).ticks(1).tickSize(xMax).tickValues([0,10,20])
+                //  .tickFormat(function(d){return d+" years"})
+                //  tenureChart.append("g").call(tenureAxis).attr("transform","translate("+xMax+",0)").attr("opacity",1)
+                //  d3.selectAll(".domain").attr("opacity",0)
+                // //  tenureChart.append('rect').attr("x",0).attr("y",tenureScale(20)-27)
+                // // .attr("width",xMax).attr("height",27)
+                // // .attr("fill","#FFCF01")
+
+                // tenureChart.append("path")
+                // .datum(averages)
+                // .attr("fill", "none")
+                // .attr("stroke", "black")
+                // .attr("stroke-width", 1.5)
+                // .attr("d",d3.line()
+                // .x(function(d){return xScale(new Date(d.year))})
+                // .y(function(d,i){return tenureScale(d.averageTenure)})
+                // )               
+                // .attr("opacity",1)
+
+                // tenureChart.append("path")
+                // .datum(rollingAverages)
+                // .attr("fill", "none")
+                // .attr("stroke", "black")
+                // .attr("stroke-width", 1)
+                // .attr("d",d3.line()
+                // .x(function(d,i){return xScale(new Date(String(d.year)))})
+                // .y(function(d,i){return tenureScale(d.averageTenure)})
+                // )               
+                // .attr("opacity",.3)
+
+                 
+                var barData = formatWiki(wiki,succession)
+                //     var timelineAxis = d3.axisTop().scale(xScale).tickSize(110)
+                //     .tickValues(timelineMarkers)
+                //     .tickFormat(function(d,i){
+                //         return d.getFullYear()
+                //     })
+
+                //     svg.append('g').attr("class","timelineAxis").call(timelineAxis)
+                //     .attr("transform","translate(0,"+(p*2.5)+")").attr("visibility","visible")
+
+                //     timelineAxis.tickSize(125)
+                //     svg.append('g').attr("class","timelineAxis").call(timelineAxis)
+                //     .attr("transform","translate(0,"+(p*1)+")").attr("visibility","visible")
+
+                //     var daysMarkers = [0,365*10,365*20,365*30,365*40]
+
+                //     var yearsWorkedAxis = d3.axisTop().scale(daysScale)
+                //     .tickValues(daysMarkers)
+                //     .tickFormat(function(d,i){
+                //         return d/365+" yrs"
+                //     })
+
+
+                    // svg.append('g').attr("class","yearsWorkedAxis").call(yearsWorkedAxis)
+                    // .attr("transform","translate(0,-2)").attr("visibility","hidden")
+
+            
+             var termsBars = svg.append("g").attr("transform","translate(20,20)")
+    
+
+            var opacityScale = d3.scaleLinear().domain([0,365*40]).range([0,1])
+            var widthScale = d3.scaleLinear().domain([0,365*40]).range([.2,3])
+
+            termsBars.selectAll(".lineLabel")
+            .data(barData)
+             .enter()
+             .append("text")
+             .attr("class","lineLabel")
+             .attr("filter","url(#solid)")
+             .attr("x",  function(d){
+                return  xScale(new Date(d.end))+4
+            })
+             .attr("y", function(d){
+                if (Object.keys(offsets).indexOf(d.name)>-1){
+                    //console.log(d.name,offsets[d.name])
+                    return  ageScale(d.ageAtEnd)-offsets[d.name]+4
+                }
+                return ageScale(d.ageAtEnd)+4//+10
+            })
+             .text(function(d){
+                if(d.name.indexOf("1")>-1){
+                    return ""
+                }
+                return d.name.replace("2","")
+            })
+             .attr("fill","black")
+             .attr('transform',function(d){
+                if (Object.keys(offsets).indexOf(d.name)>-1){
+                    //console.log(d.name,offsets[d.name])
+
+                    return 'rotate('+labelRotate+' '+(xScale(new Date(d.end))+4)+' '+(ageScale(d.ageAtEnd)-offsets[d.name]+4)+')'
+                }
+                return 'rotate('+labelRotate+' '+(xScale(new Date(d.end))+4)+' '+(ageScale(d.ageAtEnd)+4)+')'
+             })
+                 .style("cursor","pointer")
+                .on("mouseover",function(e,d){
+                       d3.select("#tooltip")
+                       .html("<b>"+d.name+"</b><br>start date: "+d.start+"<br>years served: "+Math.round(d.days/365*10)/10
+                       +"<br> age at start: "+Math.round(d.ageAtStart)
+                       +"<br> age at end: "+Math.round(d.ageAtEnd)
+                    )
+                       .style("left", e.offsetX+30+ "px")
+                       .style("top", e.offsetY+30 + "px")
+                       .style("visibility","visible")
+                       d3.select(this).attr("fill",highlightColor)
+                       
+                    })
+                    .on("mouseout",function(){
+                        d3.select(this).attr("fill",color)
+                        d3.select("#tooltip").html("")
+                        .style("visibility","hidden")
+                    })
+             
+             termsBars.selectAll("line")
+             .data(barData)
+             .enter()
+             .append("line")
+             .attr("x1",   function(d){return  xScale(new Date(d.start))})
+            // .attr("x1",   xScale(new Date(barData[0].start)))
+            .attr("y1", function(d){
+                if (Object.keys(offsets).indexOf(d.name)>-1){
+                   // console.log(d.name,offsets[d.name])
+                    return  ageScale(d.ageAtStart)-offsets[d.name]
+                }
+                return  ageScale(d.ageAtStart)
+            })
+            .attr("x2",  function(d){return  xScale(new Date(d.end))})
+            .attr("y2", function(d){
+                if (Object.keys(offsets).indexOf(d.name)>-1){
+                   //console.log(d.name,offsets[d.name])
+                    return  ageScale(d.ageAtEnd)-offsets[d.name]
+                }
+                return  ageScale(d.ageAtEnd)
+            })
+            .attr("stroke","black")
+            //.attr("stroke-width",function(d){return widthScale(d.days)})
+            .attr("stroke-width",2)
+
+
+            var xAxis = d3.axisBottom().scale(xScale).tickFormat(function(d){return new Date(d).getFullYear();})
+            .tickValues([ new Date("1,1,1790"),new Date("1,1,1800"),new Date("1,1,1825"),new Date("1,1,1850"),new Date("1,1,1875"),
+            new Date("1,1,1900"),new Date("1,1,1925"),new Date("1,1,1950"),new Date("1,1,1975"),new Date("1,1,2000"),new Date("1,1,2025")])
+            var yAxis = d3.axisLeft().scale(ageScale)
+            termsBars.append("g").call(xAxis).attr("transform","translate(0,"+ageScale(0)+")")
+            termsBars.append("g").call(yAxis).attr("transform","translate(0,0)")
+        //    .attr("transform","translate(0,"+ageScale(0)+")")
+
+             termsBars.selectAll("term")
+                .data(barData)
+                .enter()
+                .append("circle")
+                .attr("class","term")
+                .attr("cy",function(d){
+                    if (Object.keys(offsets).indexOf(d.name)>-1){
+                   // console.log(d.name,offsets[d.name])
+                    return  ageScale(d.ageAtEnd)-offsets[d.name]
+                }
+                    return ageScale(d.ageAtEnd)//*barOffset
+                })
+                .attr("cx",function(d,i){
+                    return xScale(new Date(d.end))
+                })
+                .attr("class","bars")
+                .attr("id",function(d){
+                 //   console.log(d)
+                    return d.name.split(" ").join("_")
+                    .split(".").join("")
+                    .split("\'").join("")
+                })
+                 .attr("r",4)
+                 .attr("opacity",0)
+                .attr("fill",function(d){
+                    return colorScale(d.days/365)
+                })
+            
+            })
+
+            // function sortBy(data,column){
+            //     var sorted = data.sort(function(a,b){
+            //         return b[column]-a[column]
+            //     })
+            // }
+
+        function averageAgeTenure(wiki){
+            var tenureTally = {}
+            var ageTally = {}
+            for(var year = 1790; year<2036; year++){
+                //console.log(year)
+              var currentYear = new Date("January 1,"+year)
+              ageTally[year]=[]
+             tenureTally[year]=[]
+                for(var i in wiki){
+                    var birth = new Date("January 1,"+wiki[i].birth)
+                    var startDate = new Date(wiki[i]["start date"])
+                    var endDate = new Date(wiki[i]["end date"])
+                    if(wiki[i]["end date"] =="10/24/2024"){
+                        endDate  = new Date(newEndDate)
+                    }
+                    if(currentYear<endDate && currentYear>startDate){
+                        var age = (currentYear-birth)/1000/60/60/24/365
+                        var tenure = (currentYear-startDate)/1000/60/60/24/365
+                        ageTally[year].push(age)
+                        tenureTally[year].push(tenure)
+
+                    }
+                   // console.log(wiki[i].birth, birth)
+             }
+            }
+            var averages = [{year:"2031",averageAge:0,averageTenure:0},{year:"1790",averageAge:0,averageTenure:0}]
+            function add(accumulator, a) {
+             return accumulator + a;
+            }
+            for(var a in ageTally){
+              //  console.log(a)
+                var ageSum = ageTally[a].reduce(add,0)
+                var tenureSum = tenureTally[a].reduce(add,0)
+                var averageAge = ageSum/ageTally[a].length
+                var averageTenure = tenureSum/tenureTally[a].length
+
+                averages.push({year:a,averageAge:averageAge,averageTenure:averageTenure})
+            }
+
+         return averages   
+        }
+       
+
+            function formatWiki(wiki,succession){
+                var successionArray = []
+                var successionLineDict = {}
+                for(var s in succession){
+                   // console.log(succession[s])
+                    if(s!="columns"){
+                        var line = Object.values(succession[s])
+                        .filter(Boolean)
+                        // .filter(function(d){
+                        //     return isNaN(d)
+                        // })
+                        var lineNumber = (+s+1)
+                        for(var l in line){
+                          //  console.log(lineNumber,line[l])d
+                            var nameKey = line[l].split(" ").join("_").split(".").join("")
+                            successionLineDict[nameKey]=s
+                            successionArray.push(line[l])
+                        }
+                    }
+                }
+               // console.log(successionLineDict)
+
+                var formatted = []
+                for(var w in wiki){
+                    var name = wiki[w].name
+                    if(name!=undefined){
+                        //console.log(name,successionArray.indexOf(name))
+                        // if(successionArray.indexOf(name)==-1){
+                        //     console.log(name)
+                        // }
+                        var days = parseInt(wiki[w].days)
+                        var birthYear = parseInt(wiki[w].birth)
+                        var startDate = wiki[w]["start date"]
+                        var nameKey = name.split(" ").join("_").split(".").join("")
+                        var endDate = wiki[w]["end date"]
+                        var ageAtStart = (new Date(startDate)-new Date("January 1,"+birthYear))/1000/60/60/24/365
+
+                        var ageAtEnd = (new Date(endDate)-new Date("January 1,"+birthYear))/1000/60/60/24/365
+                        if(endDate=="10/24/2024"){// && name != "Clarence Thomas"){
+                            endDate = newEndDate 
+                            days = (new Date(endDate)-new Date(startDate))/1000/60/60/24
+                            ageAtEnd = (new Date(endDate)-new Date("January 1,"+birthYear))/1000/60/60/24/365
+                        }
+
+                        formatted.push({name:name,
+                                days:days,
+                                ageAtEnd:ageAtEnd,
+                                ageAtStart:ageAtStart,
+                                start:startDate,
+                                end:endDate,
+                                successionIndex:successionArray.indexOf(name),
+                                successionLineNumber:successionLineDict[nameKey]})
+                    }   
+                }
+                sorted = formatted.sort(function(a,b){
+                    return new Date(b.start)-new Date(a.start)
+                })
+                for(var s in sorted){
+                    sorted[s]["startRank"]=s
+                }
+                var sorted = formatted.sort(function(a,b){
+                    return b.days-a.days
+                })
+                for(var s in sorted){
+                    sorted[s]["daysRank"]=s
+                }
+                
+                //console.log(sorted)
+                return sorted
+
+            }
+  </script>
+  
+</body>
+</html>

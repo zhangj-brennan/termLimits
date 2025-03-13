@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="d3.v7.min.js" charset="utf-8"></script>
+<style>
+    @font-face {
+            font-family: "bc";
+            src: url("Benton Sans/Benton Sans Regular.otf") format("truetype");
+        }
+
+        body{
+            font-family:bc;
+            font-size:.9em;
+        }
+        
+        svg text{
+            font-family:bc;
+            font-size:.8em;
+        }
+   
+    #tooltip{
+        position:absolute;
+        left:0px;
+        top:0;
+        visibility:visible;
+        z-index:2;
+        background-color:rgba(0,0,0,1);
+        color:white;
+        padding:5px;
+    }
+    .button{
+        display:inline-block;
+        padding:10px;
+        border:1px solid black;
+    }
+</style>
+</head>
+<body>
+    <!-- <div id="controls">
+        X AXIS
+        <div id="startDateX" class="toggle x">view as timeline</div>
+        <div id="compare" class="toggle x">view as bar chart</div>
+        Y AXIS
+        <div id="length" class="toggle y">sort by term length</div>
+        <div id="startDateY" class="toggle y">sort by start date</div>
+        <div id="succession" class="toggle x y">view as succession lines</div>
+    </div> -->
+   Justice age over time
+   <div id="buttons">
+        <div class="button" id="start">START</div>
+        <div class="button" id="end">END</div>
+        <div class="button" id="line">LINE</div>
+        <div class="button" id="all">ALL</div>
+   </div>
+   <div id="chart"></div>
+    <div id="tooltip"></div>
+    <div id="tooltip2"></div>
+
+  <script>
+    var newEndDate = "1/1/2032"
+
+    var minDate = new Date("October 5, 1789")
+    var maxDate = new Date(newEndDate )
+    var barWidth = 4
+    var barOffset = 5
+    var xMax = 1400
+    var yMax = 400
+    var p = 80
+
+    var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,xMax])
+    var grid = 80
+    var yearlyRadiusOffset = 3
+    var color = "black"
+    var barColor = "black"
+
+
+    var highlightColor = "cyan"
+
+    var labelSize = 10
+    var opacity = .1
+    var barOpacity = 1
+    var colorScale = d3.scaleLinear().domain([10,20]).range([color,barColor])
+    var totalDays = (maxDate-minDate)/1000/24/60/60
+    var pixelsPerDay = xMax/totalDays
+    var daysScale = d3.scaleLinear().domain([0,40*365]).range([0,40*365*pixelsPerDay])
+
+
+    function averageAgeTenure(wiki){
+            var tenureTally = {}
+            var ageTally = {}
+            var ageStart = {}
+            var ageEnd ={}
+
+            for(var year = 1790; year<2035; year++){
+                //console.log(year)
+              var currentYear = new Date("January 1,"+year)
+              ageTally[year]=[]
+             tenureTally[year]=[]
+                for(var i in wiki){
+                    var birth = new Date("January 1,"+wiki[i].birth)
+                    var startDate = new Date(wiki[i]["start date"])
+                    var endDate = new Date(wiki[i]["end date"])
+                    if(wiki[i]["end date"] =="10/24/2024"){
+                        endDate  = new Date(newEndDate)
+                    }
+                    if(currentYear<endDate && currentYear>startDate){
+                        var age = (currentYear-birth)/1000/60/60/24/365
+                        var tenure = (currentYear-startDate)/1000/60/60/24/365
+                        ageTally[year].push(age)
+                        tenureTally[year].push(tenure)
+
+                    }
+                   // console.log(wiki[i].birth, birth)
+             }
+            }
+            var averages = []
+            function add(accumulator, a) {
+             return accumulator + a;
+            }
+            for(var a in ageTally){
+              //  console.log(a)
+                var ageSum = ageTally[a].reduce(add,0)
+                var tenureSum = tenureTally[a].reduce(add,0)
+                var averageAge = ageSum/ageTally[a].length
+                var averageTenure = tenureSum/tenureTally[a].length
+
+                averages.push({year:a,averageAge:averageAge,averageTenure:averageTenure})
+            }
+         return averages   
+        }
+
+function getActiveByYear(year,wiki){
+
+//console.log(year.getFullYear())
+
+var active = []
+
+for(var i in wiki){
+  //  console.log(wiki[i])
+    var start = new Date(wiki[i]["start date"])
+    var end = new Date(wiki[i]["end date"])
+    if(start<year && end>year){
+        active.push(wiki[i])
+    }
+}
+return active
+}
+
+function drawActive(active,svg){
+    d3.selectAll(".active").remove()
+
+    svg.selectAll(".active")
+    .data(active)
+    .enter()
+    .append("rect")
+    .attr("class","active")
+    .attr("y",function(d,i){return i*20})
+    .attr("height",20)
+    .attr("x",function(d){return xScale(new Date(d["start date"]))})
+    .attr("width",function(d){return d.days*pixelsPerDay })
+}
+
+    Promise.all([d3.csv("data/scotus_succession_flip.csv"),d3.csv("data/scotus_wiki.csv")])
+            .then(function(data){
+               // console.log(data)
+                var succession = data[0]
+                var wiki = data[1]
+          
+
+                var averages = averageAgeTenure(wiki)
+                console.log(averages)
+
+            //    var formattedWiki = formatWiki(wiki,succession)
+                var svg = d3.select("#chart")
+                    .append("svg")
+                    .attr("width",xMax+200)
+                    .attr("height",2000)
+                    .append("g")
+                    .attr("transform","translate("+p+","+p+")")
+                 
+                var barData = formatWiki(wiki,succession)
+                //console.log(barData)
+            
+             var termsBars = svg.append("g")//.attr("transform","translate(0,"+p*3+")")
+
+
+
+             termsBars.append("text").text("JUSTICE AGE").attr("x",-70).attr("y",-10)
+             termsBars.append("text").text("TIME").attr("x",0).attr("y",440)
+
+             var yScale = d3.scaleLinear().domain([0,100]).range([yMax,0])
+            
+             var yAxis = d3.axisLeft().scale(yScale)
+             termsBars.append("g").call(yAxis)
+
+             var timelineMarkers = [new Date("January 1, 1950"),new Date("January 1, 1800"),
+             new Date("January 1, 1850"),new Date("January 1, 1900"),new Date("January 1, 2000"),
+             new Date("January 1, 2025"),new Date("January 1, 2032")]
+
+             var xAxis = d3.axisBottom().scale(xScale) 
+             .tickValues(timelineMarkers)
+                    .tickFormat(function(d,i){
+                        return d.getFullYear()
+                    })
+                    
+             termsBars.append("g").call(xAxis).attr("transform","translate(0,"+yMax+")")
+            
+
+
+
+             termsBars.append("path")
+                .datum(averages)
+                .attr("fill", "none")
+                .attr("stroke", "black")
+                .attr("stroke-width", 1.5)
+                .attr("d",d3.line()
+                .x(function(d){return xScale(new Date(d.year))})
+                .y(function(d,i){return yScale(d.averageAge)})   
+                )
+                .attr("opacity",.3)
+
+
+
+            //  termsBars.selectAll("termCircles")
+            //     .data(barData)
+            //     .enter()
+            //     .append("circle")
+            //     .attr("class","term")
+            //     .attr("cy",function(d){
+            //         //console.log(d)
+            //         return yScale(d.ageAtStart)
+            //     })
+            //     .attr("cx",function(d,i){
+            //         return xScale(new Date(d.start))
+            //     })
+            //     .attr("r",function(d){
+            //       return 2
+            //     })
+            //     .attr("class","justice start")
+
+
+            // termsBars.selectAll("termCircles")
+            //     .data(barData)
+            //     .enter()
+            //     .append("circle")
+            //     .attr("class","term")
+            //     .attr("cy",function(d){
+            //        // console.log(d)
+            //         return yScale(d.ageAtEnd)
+            //     })
+            //     .attr("cx",function(d,i){
+            //         return xScale(new Date(d.end))
+            //     })
+            //     .attr("r",function(d){
+            //       return 2
+            //     })
+            //     .attr("fill","red")
+            //     .attr("class","justice end")
+
+
+
+
+             termsBars.selectAll("term")
+                .data(barData)
+                .enter()
+                .append("line")
+                .attr("class","term")
+                .attr("y1",function(d){
+                   // console.log(d)
+                    return yScale(d.ageAtStart)
+                })
+                .attr("x1",function(d,i){
+                    return xScale(new Date(d.start))
+                })
+                .attr("y2",function(d){
+                   // console.log(d)
+                    return yScale(d.ageAtEnd)
+                })
+                .attr("x2",function(d,i){
+                    return xScale(new Date(d.end))
+                })
+                .attr("class","justice line")
+                .attr("id",function(d){
+                    //console.log(d.name)
+                    return d.name.split(" ").join("_")
+                    .split(".").join("")
+                    .split("\'").join("")
+                })
+               .attr("stroke","black")
+               .attr("stroke-width",1)
+               .attr("opacity",1)
+                .style("cursor","pointer")
+                .on("mouseover",function(e,d){
+                       d3.select("#tooltip")
+                       .html("<b>"+d.name+"</b><br>start date: "+d.start+"<br>years served: "+Math.round(d.days/365*10)/10
+                       +"<br> age at start: "+Math.round(d.ageAtStart)
+                       +"<br> age at end: "+Math.round(d.ageAtEnd)
+                    )
+                       .style("left", e.offsetX+10+ "px")
+                       .style("top", e.offsetY + "px")
+                       .style("visibility","visible")
+                       d3.select(this).attr("fill",highlightColor)
+                       
+                    })
+                    .on("mouseout",function(){
+                        d3.select(this).attr("fill",color)
+                        d3.select("#tooltip").html("")
+                        .style("visibility","hidden")
+                    })
+            })
+
+
+var startButton = d3.select("#start")
+startButton.on("click",function(){
+    d3.selectAll(".justice").attr("opacity",0)
+    d3.selectAll(".start").attr("opacity",1)
+})
+d3.select("#end").on("click",function(){
+    d3.selectAll(".justice").attr("opacity",0)
+    d3.selectAll(".end").attr("opacity",1)
+})
+d3.select("#line").on("click",function(){
+    d3.selectAll(".justice").attr("opacity",0)
+    d3.selectAll(".line").attr("opacity",1)
+})
+d3.select("#all").on("click",function(){
+    d3.selectAll(".justice").attr("opacity",1)
+})
+            function sortBy(data,column){
+                var sorted = data.sort(function(a,b){
+                    return b[column]-a[column]
+                })
+            }
+
+
+            function formatWiki(wiki,succession){
+                var successionArray = []
+                var successionLineDict = {}
+                for(var s in succession){
+                   // console.log(succession[s])
+                    if(s!="columns"){
+                        var line = Object.values(succession[s])
+                        .filter(Boolean)
+                        // .filter(function(d){
+                        //     return isNaN(d)
+                        // })
+                        var lineNumber = (+s+1)
+                        for(var l in line){
+                          //  console.log(lineNumber,line[l])d
+                            var nameKey = line[l].split(" ").join("_").split(".").join("")
+                            successionLineDict[nameKey]=s
+                            successionArray.push(line[l])
+                        }
+                    }
+                }
+                var formatted = []
+                for(var w in wiki){
+                    var name = wiki[w].name
+                    if(name!=undefined){
+     
+                        var days = parseInt(wiki[w].days)
+                        var birthYear = parseInt(wiki[w].birth)
+                        var startDate = wiki[w]["start date"]
+                        var nameKey = name.split(" ").join("_").split(".").join("")
+                        var endDate = wiki[w]["end date"]
+                        var ageAtStart = (new Date(startDate)-new Date("January 1,"+birthYear))/1000/60/60/24/365
+
+                        console.log(birthYear)
+                        var yearAge70 = birthYear+70
+
+                        var ageAtEnd = (new Date(endDate)-new Date("January 1,"+birthYear))/1000/60/60/24/365
+                        if(endDate=="10/24/2024" && name != "Clarence Thomas"){
+                            endDate = "1/1/"+yearAge70
+                            endDate = newEndDate
+                            days = (new Date(endDate)-new Date(startDate))/1000/60/60/24
+                            ageAtEnd = (new Date(endDate)-new Date("January 1,"+birthYear))/1000/60/60/24/365
+                        }
+                        formatted.push({name:name,
+                                days:days,
+                                ageAtEnd:ageAtEnd,
+                                ageAtStart:ageAtStart,
+                                start:startDate,
+                                end:endDate,
+                                successionIndex:successionArray.indexOf(name),
+                                successionLineNumber:successionLineDict[nameKey]})
+                    }   
+                }
+                sorted = formatted.sort(function(a,b){
+                    return new Date(b.start)-new Date(a.start)
+                })
+                for(var s in sorted){
+                    sorted[s]["startRank"]=s
+                }
+                var sorted = formatted.sort(function(a,b){
+                    return b.days-a.days
+                })
+                for(var s in sorted){
+                    sorted[s]["daysRank"]=s
+                }
+                //console.log(sorted)
+                return sorted
+
+            }
+  </script>
+  
+</body>
+</html>

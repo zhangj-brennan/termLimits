@@ -15,7 +15,7 @@
         
         svg text{
             font-family:bc;
-            font-size:.8em;
+            font-size:.9em;
         }
    
     #tooltip{
@@ -51,10 +51,10 @@
 
     var minDate = new Date("October 5, 1789")
     var maxDate = new Date(newEndDate )
-    var barWidth = 2
+    var barWidth = 4
     var barOffset = 5
-    var xMax = 2000
-    var p = 150
+    var xMax = 700
+    var p = 80
     var yMax = barOffset*121
 
     var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,xMax])
@@ -119,15 +119,29 @@ function drawActive(active,svg){
     console.log(active)
     d3.selectAll(".active").remove()
 
-    svg.selectAll(".active")
+    var chart = svg.append("g")
+    .attr("transform","translate(0,300)")
+
+
+    chart.selectAll(".active")
     .data(active)
     .enter()
     .append("rect")
     .attr("class","active")
     .attr("y",function(d,i){return i*20})
-    .attr("height",20)
+    .attr("height",10)
     .attr("x",function(d){return xScale(new Date(d["start date"]))})
     .attr("width",function(d){return d.days*pixelsPerDay })
+
+
+    chart.selectAll(".activeText")
+    .data(active)
+    .enter()
+    .append("text")
+    .attr("class","active")
+    .attr("y",function(d,i){return i*20+10})
+    .attr("x",function(d){return xScale(new Date(d["start date"]))+d.days*pixelsPerDay+5})
+    .text(function(d){return d.name})
 }
 
 
@@ -156,25 +170,25 @@ function drawActive(active,svg){
                     .attr("transform","translate("+p+","+p+")")
 
 
-            //    var overlay = svg.append("g").append("rect").attr("x",0).attr("y",0).attr("width",xMax).attr("height",500)//.attr("opacity",.5).attr("fill","blue")
+                var overlay = svg.append("g").append("rect").attr("x",0).attr("y",0).attr("width",xMax).attr("height",500).attr("opacity",.5).attr("fill","white")
 
-                var mouseBar = svg.append("g").append("rect").attr("x",10).attr("y",0).attr("width",5).attr("height",250).attr("opacity",.5).attr("fill","gold")
+                var mouseBar = svg.append("g").append("rect").attr("x",10).attr("y",0).attr("width",5).attr("height",600).attr("opacity",.5).attr("fill","gold")
                 .attr("id","timeMarker")
 
 
-                // overlay.on("mousemove",function(e){
-                //   mouseBar.attr("x",d3.pointer(e)[0])
+                overlay.on("mousemove",function(e){
+                  mouseBar.attr("x",d3.pointer(e)[0])
                   
-                //   var year = new Date(xScale.invert(d3.pointer(e)[0]))
-                //   var active = getActiveByYear(year,wiki)
-                //   drawActive(active,svg)
-                // })
+                  var year = new Date(xScale.invert(d3.pointer(e)[0]))
+                  var active = getActiveByYear(year,wiki)
+                  drawActive(active,svg)
+                })
 
                 
                 var ageChart = svg.append("g")
-                ageChart.append("text").text("AVERAGE AGE").attr("x",-80).attr("y",10)
-                var ageScale = d3.scaleLinear().domain([0,80]).range([p,0])
-                var ageAxis = d3.axisLeft().scale(ageScale).ticks(1).tickSize(xMax).tickValues([0,30,60])
+                ageChart.append("text").text("AVERAGE AGE").attr("x",0).attr("y",10)
+                var ageScale = d3.scaleLinear().domain([40,80]).range([p,0])
+                var ageAxis = d3.axisLeft().scale(ageScale).ticks(1).tickSize(xMax).tickValues([70])
                 .tickFormat(function(d){return d+" years"})
 
                 ageChart.append("g").call(ageAxis).attr("transform","translate("+xMax+",0)").attr("opacity",1)
@@ -211,9 +225,9 @@ function drawActive(active,svg){
 
                  var tenureScale = d3.scaleLinear().domain([0,30]).range([p,0])
                  var tenureChart = svg.append("g") .attr("transform","translate(0,"+(p*1.5)+")")
-                 tenureChart.append("text").text("AVERAGE WORK AGE").attr("x",-120).attr("y",40)
+                 tenureChart.append("text").text("AVERAGE WORK AGE").attr("x",0).attr("y",10)
 
-                 var tenureAxis = d3.axisLeft().scale(tenureScale).ticks(1).tickSize(xMax).tickValues([0,10,20])
+                 var tenureAxis = d3.axisLeft().scale(tenureScale).ticks(1).tickSize(xMax).tickValues([20])
                  .tickFormat(function(d){return d+" years"})
                  tenureChart.append("g").call(tenureAxis).attr("transform","translate("+xMax+",0)").attr("opacity",1)
                  d3.selectAll(".domain").attr("opacity",0)
@@ -247,20 +261,16 @@ function drawActive(active,svg){
                 var barData = formatWiki(wiki,succession)
                 //console.log(barData)
 
-                var timelineMarkers = [new Date("January 1, 1950"),new Date("January 1, 1800"),new Date("January 1, 1850"),new Date("January 1, 1900"),new Date("January 1, 2000"),new Date("January 1, 2024"),new Date(newEndDate)]
+                var timelineMarkers = [new Date("January 1, 1800"),new Date("January 1, 1900"),new Date("January 1, 2000"),new Date("January 1, 2024"),new Date(newEndDate)]
 
-                    var timelineAxis = d3.axisTop().scale(xScale).tickSize(110)
+                    var timelineAxis = d3.axisTop().scale(xScale).tickSize(5)
                     .tickValues(timelineMarkers)
                     .tickFormat(function(d,i){
                         return d.getFullYear()
                     })
 
                     svg.append('g').attr("class","timelineAxis").call(timelineAxis)
-                    .attr("transform","translate(0,"+(p*2.5)+")").attr("visibility","visible")
-
-                    timelineAxis.tickSize(125)
-                    svg.append('g').attr("class","timelineAxis").call(timelineAxis)
-                    .attr("transform","translate(0,"+(p*1)+")").attr("visibility","visible")
+                    .attr("transform","translate(0,"+(p*3)+")").attr("visibility","visible")
 
                     var daysMarkers = [0,365*10,365*20,365*30,365*40]
 
@@ -270,7 +280,6 @@ function drawActive(active,svg){
                         return d/365+" yrs"
                     })
 
-
                     svg.append('g').attr("class","yearsWorkedAxis").call(yearsWorkedAxis)
                     .attr("transform","translate(0,-2)").attr("visibility","hidden")
 
@@ -278,49 +287,49 @@ function drawActive(active,svg){
              var termsBars = svg.append("g").attr("transform","translate(0,"+p*3+")")
              termsBars.append("text").text("JUSTICE TERMS").attr("x",0).attr("y",40)
 
-             termsBars.selectAll("term")
-                .data(barData)
-                .enter()
-                .append("rect")
-                .attr("class","term")
-                .attr("y",function(d){
-                    return d.startRank*barOffset
-                })
-                .attr("x",function(d,i){
-                    return xScale(new Date(d.start))
-                })
-                .attr("class","bars")
-                .attr("id",function(d){
-                    //console.log(d.name)
-                    return d.name.split(" ").join("_")
-                    .split(".").join("")
-                    .split("\'").join("")
-                })
-                .attr("width",function(d,i){
-                    return d.days*pixelsPerDay})
-                .attr("height",barWidth)
-                .attr("opacity",barOpacity)
-                .attr("fill",function(d){
-                    return colorScale(d.days/365)
-                })
-                .style("cursor","pointer")
-                .on("mouseover",function(e,d){
-                       d3.select("#tooltip")
-                       .html("<b>"+d.name+"</b><br>start date: "+d.start+"<br>years served: "+Math.round(d.days/365*10)/10
-                       +"<br> age at start: "+Math.round(d.ageAtStart)
-                       +"<br> age at end: "+Math.round(d.ageAtEnd)
-                    )
-                       .style("left", e.offsetX+10+ "px")
-                       .style("top", e.offsetY + "px")
-                       .style("visibility","visible")
-                       d3.select(this).attr("fill",highlightColor)
+            //  termsBars.selectAll("term")
+            //     .data(barData)
+            //     .enter()
+            //     .append("rect")
+            //     .attr("class","term")
+            //     .attr("y",function(d){
+            //         return d.startRank*barOffset
+            //     })
+            //     .attr("x",function(d,i){
+            //         return xScale(new Date(d.start))
+            //     })
+            //     .attr("class","bars")
+            //     .attr("id",function(d){
+            //         //console.log(d.name)
+            //         return d.name.split(" ").join("_")
+            //         .split(".").join("")
+            //         .split("\'").join("")
+            //     })
+            //     .attr("width",function(d,i){
+            //         return d.days*pixelsPerDay})
+            //     .attr("height",barWidth)
+            //     .attr("opacity",barOpacity)
+            //     .attr("fill",function(d){
+            //         return colorScale(d.days/365)
+            //     })
+            //     .style("cursor","pointer")
+            //     .on("mouseover",function(e,d){
+            //            d3.select("#tooltip")
+            //            .html("<b>"+d.name+"</b><br>start date: "+d.start+"<br>years served: "+Math.round(d.days/365*10)/10
+            //            +"<br> age at start: "+Math.round(d.ageAtStart)
+            //            +"<br> age at end: "+Math.round(d.ageAtEnd)
+            //         )
+            //            .style("left", e.offsetX+10+ "px")
+            //            .style("top", e.offsetY + "px")
+            //            .style("visibility","visible")
+            //            d3.select(this).attr("fill",highlightColor)
                        
-                    })
-                    .on("mouseout",function(){
-                        d3.select(this).attr("fill",color)
-                        d3.select("#tooltip").html("")
-                        .style("visibility","hidden")
-                    })
+            //         })
+            //         .on("mouseout",function(){
+            //             d3.select(this).attr("fill",color)
+            //             d3.select("#tooltip").html("")
+            //             .style("visibility","hidden")
+            //         })
             })
 
             function sortBy(data,column){
@@ -415,6 +424,7 @@ function drawActive(active,svg){
                             days = (new Date(endDate)-new Date(startDate))/1000/60/60/24
                             ageAtEnd = (new Date(endDate)-new Date("January 1,"+birthYear))/1000/60/60/24/365
                         }
+                    
 
                         formatted.push({name:name,
                                 days:days,
