@@ -38,7 +38,7 @@
     }
     #title{
         font-family:bcBOLD;
-        font: size 3px;em;
+        font-size: 2em;
     }
 </style>
 </head>
@@ -239,15 +239,21 @@ function drawActive(active,svg){
                     .append("g")
                     .attr("transform","translate("+p+","+p+")")
 
-                    svg.append("rect").attr("x",40).attr("y",20).attr("width",12).attr("height",12).attr("fill","#ED1C24")
+                    svg.append("rect").attr("x",80).attr("y",20).attr("width",12).attr("height",12).attr("fill","#ED1C24")
                     .attr("opacity",0.5)
 
-                    svg.append("rect").attr("x",40).attr("y",40).attr("width",12).attr("height",12).attr("fill","#007194")
+                    svg.append("rect").attr("x",80).attr("y",40).attr("width",12).attr("height",12).attr("fill","#007194")
                     .attr("opacity",0.5)
 
-                    svg.append("text").attr("x",55).attr("y",30).text("average age").attr("fill","#ED1C24")
-                    svg.append("text").attr("x",55).attr("y",50).text("average tenure").attr("fill","#007194")
-            //    var overlay = svg.append("g").append("rect").attr("x",0).attr("y",0).attr("width",xMax).attr("height",500)//.attr("opacity",.5).attr("fill","blue")
+                    svg.append("text").attr("x",95).attr("y",30).text("average age").attr("fill","#ED1C24")
+                    svg.append("text").attr("x",95).attr("y",50).text("average tenure").attr("fill","#007194")
+
+
+                    svg.append("text").attr("x",35).attr("y",300).text("YEARS OLD").attr("fill","#000")
+                    .attr("transform","rotate(-90 35 300)")
+                    //    var overlay = svg.append("g").append("rect").attr("x",0).attr("y",0).attr("width",xMax).attr("height",500)//.attr("opacity",.5).attr("fill","blue")
+
+                    svg.append("text").attr("x",600).attr("y",650).text("TIME").attr("fill","#000")
 
                 // var mouseBar = svg.append("g").append("rect").attr("x",10).attr("y",0).attr("width",5).attr("height",250).attr("opacity",.5).attr("fill","gold")
                 // .attr("id","timeMarker")
@@ -469,7 +475,7 @@ function drawActive(active,svg){
                     // .attr("transform","translate(0,-2)").attr("visibility","hidden")
 
             
-             var termsBars = svg.append("g").attr("transform","translate(20,20)")
+             var termsBars = svg.append("g").attr("transform","translate(60,20)")
     
 
             var opacityScale = d3.scaleLinear().domain([0,365*40]).range([0,1])
