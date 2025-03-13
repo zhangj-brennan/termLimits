@@ -34,10 +34,11 @@
         padding:5px;
         font-family:bc;
         font-size:.85em;
+        width:200px;
     }
     #title{
         font-family:bcBOLD;
-        font-size:3em;
+        font: size 3px;em;
     }
 </style>
 </head>
@@ -73,7 +74,7 @@
     var barWidth = 12
     var barOffset = 5
     var xMax = 5000
-    var labelRotate =-18
+    var labelRotate =-16
 
     var p = 10
     var yMax = barOffset*121
@@ -496,6 +497,10 @@ function drawActive(active,svg){
                 }
                 return d.name.replace("2","")
             })
+            .attr("id",function(d){
+                return "_"+d.startRank
+
+            })
              .attr("fill","black")
              .attr('transform',function(d){
                 if (Object.keys(offsets).indexOf(d.name)>-1){
@@ -505,7 +510,7 @@ function drawActive(active,svg){
                 }
                 return 'rotate('+labelRotate+' '+(xScale(new Date(d.end))+4)+' '+(ageScale(d.ageAtEnd)+4)+')'
              })
-                 .style("cursor","pointer")
+                .style("cursor","pointer")
                 .on("mouseover",function(e,d){
                        d3.select("#tooltip")
                        .html("<b>"+d.name+"</b><br>start date: "+d.start+"<br>years served: "+Math.round(d.days/365*10)/10
@@ -515,19 +520,27 @@ function drawActive(active,svg){
                        .style("left", e.offsetX+30+ "px")
                        .style("top", e.offsetY+30 + "px")
                        .style("visibility","visible")
-                       d3.select(this).attr("fill",highlightColor)
+
+                       var thisId = d3.select(this).attr("id")
+                       d3.selectAll("#"+thisId).attr("fill",highlightColor)
                        
                     })
                     .on("mouseout",function(){
-                        d3.select(this).attr("fill",color)
                         d3.select("#tooltip").html("")
                         .style("visibility","hidden")
+
+                        var thisId = d3.select(this).attr("id")
+                        d3.selectAll("#"+thisId).attr("fill",color)
                     })
              
              termsBars.selectAll("line")
              .data(barData)
              .enter()
              .append("line")
+             .attr("id",function(d){
+                return "_"+d.startRank
+
+            })
              .attr("x1",   function(d){return  xScale(new Date(d.start))})
             // .attr("x1",   xScale(new Date(barData[0].start)))
             .attr("y1", function(d){
