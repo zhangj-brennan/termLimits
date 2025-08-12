@@ -35,10 +35,11 @@
         font-family:bc;
         font-size:.85em;
         width:200px;
+        border:2px solid black;
     }
     #title{
         font-family:bcBOLD;
-        font-size: 2em;
+        font-size: 1.2em;
     }
 </style>
 </head>
@@ -52,26 +53,16 @@
         <div id="startDateY" class="toggle y">sort by start date</div>
         <div id="succession" class="toggle x y">view as succession lines</div>
     </div> -->
-    <div id="title">A VERY DETAILED TIMELINE</div>
+    <div id="title">AGE AND TIME ON COURT</div>
     <div id="chart"></div>
     <div id="tooltip"></div>
-
-    <defs>
-        <filter x="0" y="0" width="1" height="1" id="solid">
-          <feFlood flood-color="yellow" result="bg" />
-          <feMerge>
-            <feMergeNode in="bg"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
 
   <script>
     var newEndDate = "1/1/2032"
 
     var minDate = new Date("October 5, 1789")
     var maxDate = new Date(newEndDate )
-    var barWidth = 12
+    var barWidth = 10
     var barOffset = 5
     var xMax = 5000
     var labelRotate =-16
@@ -80,7 +71,7 @@
     var yMax = barOffset*121
 
     var xScale = d3.scaleLinear().domain([minDate,maxDate]).range([0,xMax])
-    var grid = 80
+    var grid = 60
     var yearlyRadiusOffset = 3
     var color = "black"
     var barColor = "black"
@@ -140,7 +131,7 @@ return active
 var textOffset = 10
 var offsets = {
 "Thomas Johnson":26,
-"John Blair Jr.":12,
+"John Blair":12,
 "Samuel Chase":0,
 "James Wilson":-6,
 "William Paterson":-22,
@@ -239,21 +230,18 @@ function drawActive(active,svg){
                     .append("g")
                     .attr("transform","translate("+p+","+p+")")
 
-                    svg.append("rect").attr("x",80).attr("y",20).attr("width",12).attr("height",12).attr("fill","#ED1C24")
-                    .attr("opacity",0.5)
+                    // svg.append("rect").attr("x",80).attr("y",20).attr("width",12).attr("height",12).attr("fill","#ED1C24")
+                    // .attr("opacity",0.5)
 
-                    svg.append("rect").attr("x",80).attr("y",40).attr("width",12).attr("height",12).attr("fill","#007194")
-                    .attr("opacity",0.5)
+                    // svg.append("rect").attr("x",80).attr("y",40).attr("width",12).attr("height",12).attr("fill","#007194")
+                    // .attr("opacity",0.5)
 
-                    svg.append("text").attr("x",95).attr("y",30).text("average age").attr("fill","#ED1C24")
-                    svg.append("text").attr("x",95).attr("y",50).text("average tenure").attr("fill","#007194")
+                  
 
-
-                    svg.append("text").attr("x",35).attr("y",300).text("YEARS OLD").attr("fill","#000")
-                    .attr("transform","rotate(-90 35 300)")
+                    // svg.append("text").attr("x",35).attr("y",300).text("YEARS OLD").attr("fill","#000")
+                    // .attr("transform","rotate(-90 35 300)")
                     //    var overlay = svg.append("g").append("rect").attr("x",0).attr("y",0).attr("width",xMax).attr("height",500)//.attr("opacity",.5).attr("fill","blue")
 
-                    svg.append("text").attr("x",600).attr("y",650).text("TIME").attr("fill","#000")
 
                 // var mouseBar = svg.append("g").append("rect").attr("x",10).attr("y",0).attr("width",5).attr("height",250).attr("opacity",.5).attr("fill","gold")
                 // .attr("id","timeMarker")
@@ -280,39 +268,45 @@ function drawActive(active,svg){
                 
                  //var tenureScale = d3.scaleLinear().domain([0,40]).range([p,0])
                 // var tenureChart = svg.append("g")
-                // ageChart.append("path")
-                // .datum(averages)
-                // .attr("fill", "red")
-                // .attr("stroke", "black")
-                // .attr("stroke-width", 1.5)
-                // .attr("d",d3.line()
-                //      .x(function(d){return xScale(new Date(d.year))})
-                //     .y(function(d,i){return ageScale(d.averageAge)})   
-                // )
-                // .attr("transform","translate(0,"+p+")")
-                // .attr("opacity",.1)
+                ageChart.append("path")
+                .datum(averages)
+                .attr("fill", "#ED1C24")
+                .attr("stroke", "white")
+                .attr("stroke-width", 1.5)
+                .attr("d",d3.line()
+                     .x(function(d){return xScale(new Date(d.year))})
+                    .y(function(d,i){return ageScale(d.averageAge)}) 
+                   //  .curve(d3.curveCatmullRom.alpha(0.5))
+                )
+                .attr("transform","translate("+p*4+","+p+")")
+                .attr("opacity",.8)
+                    svg.append("text").attr("x",160).attr("y",450).text("Average age").attr("fill","#fff")
 
-                // ageChart.append("path")
-                // .datum(averages)
-                // .attr("fill", "yellow")
-                // .attr("stroke", "black")
-                // .attr("stroke-width", 1.5)
-                // .attr("d",d3.line()
-                // .x(function(d){return xScale(new Date(String(d.year)))})
-                // .y(function(d,i){return ageScale(d.averageTenure)})   
-                // )
-                // .attr("transform","translate(0,"+p+")")
-                // .attr("opacity",.5)
+
+                ageChart.append("path")
+                .datum(averages)
+                .attr("fill", "#007194")
+                .attr("stroke", "white")
+                .attr("stroke-width", 2)
+                .attr("d",d3.line()
+                .x(function(d){return xScale(new Date(String(d.year)))})
+                .y(function(d,i){return ageScale(d.averageTenure)}) 
+                                    // .curve(d3.curveCatmullRom.alpha(0.5))
+  
+                )
+                .attr("transform","translate("+p*4+","+p+")")
+                .attr("opacity",1)
+
+                  svg.append("text").attr("x",160).attr("y",610).text("Average tenure").attr("fill","#fff")
 
                 // ageChart.selectAll(".tenureCircle")
                 // .data(averages)
                 // .enter()
                 // .append("circle")
                 // .attr("fill", "black")
-                // .attr("stroke-width", 1.5)
-                // .attr("cx",function(d){return xScale(new Date(String(d.year)))})
+                // .attr("cx",function(d){return xScale(new Date(String(d.year)))+5})
                 // .attr("cy",function(d,i){return ageScale(d.averageTenure)})   
-                // .attr("r",2)
+                // .attr("r",1)
                 // .attr("transform","translate(0,"+p+")")
                 // .attr("opacity",1)
                 // .on("mouseover",function(e,d){
@@ -321,96 +315,89 @@ function drawActive(active,svg){
 
 
                 var tenureColor = d3.scaleLinear().domain([1,30]).range(["#fff","#00415B"])
-                var ageColor = d3.scaleLinear().domain([50,90]).range(["#fff","#ED1C24"])
+                var ageColor = d3.scaleLinear().domain([50,90]).range(["#aaa","red"])
 
-                ageChart.selectAll(".ageBar")
-                .data(averages)
-                .enter()
-                .append("rect")
-                .attr("fill", function(d){return ageColor(d.averageAge)})
-                .attr("stroke-width", 1.5)
-                .attr("x",function(d){return xScale(new Date(String(d.year)))})
-                .attr("y",function(d,i){return ageScale(d.averageAge)})   
-                .attr("width",barWidth)
-                .attr("height",function(d,i){return 600-ageScale(d.averageAge)})   
-                .attr("r",2)
-                .attr("transform","translate(0,"+p+")")
-                .attr("opacity",1)
-                .attr("cursor","pointer")
-                .on("mouseover",function(e,d){
-                    d3.select("#_age_"+d.year).attr("opacity",1)
-                })
-                .on("mouseout",function(e,d){
-                    d3.select("#_age_"+d.year).attr("opacity",0)
-                })
-                .attr("opacity",0.3)
+                // ageChart.selectAll(".ageBar")
+                // .data(averages)
+                // .enter()
+                // .append("rect")
+                // .attr("fill", function(d){return ageColor(d.averageAge)})
+                // .attr("x",function(d){return xScale(new Date(String(d.year)))})
+                // .attr("y",function(d,i){return ageScale(d.averageAge)})   
+                // .attr("width",2)
+                // .attr("height",function(d,i){return 600-ageScale(d.averageAge)})   
+                // .attr("transform","translate(0,"+p+")")
+                // .attr("opacity",1)
+                // .attr("cursor","pointer")
+                // .on("mouseover",function(e,d){
+                //     d3.select("#_age_"+d.year).attr("opacity",1)
+                // })
+                // .on("mouseout",function(e,d){
+                //     d3.select("#_age_"+d.year).attr("opacity",0)
+                // })
 
 
-                ageChart.selectAll(".tenureBar")
-                .data(averages)
-                .enter()
-                .append("text")
-                .attr("fill", "red")
-                .attr("stroke-width", 1.5)
-                .attr("id",function(d){
-                    return "_age_"+d.year
-                })
-                .attr("x",function(d){return xScale(new Date(String(d.year)))+5})
-                .attr("y",function(d,i){return ageScale(d.averageAge)-2})   
-                // .attr("width",20)
+                // ageChart.selectAll(".tenureBar")
+                // .data(averages)
+                // .enter()
+                // .append("text")
+                // .attr("fill", "red")
+                // .attr("id",function(d){
+                //     return "_age_"+d.year
+                // })
+                // .attr("x",function(d){return xScale(new Date(String(d.year)))+5})
+                // .attr("y",function(d,i){return ageScale(d.averageAge)-2})   
+                // // .attr("width",20)
+                // // .attr("height",function(d,i){return 600-ageScale(d.averageTenure)})   
+                // // .attr("r",2)
+                // .text(function(d){
+                //     return Math.round(d.averageAge)
+                // })
+                // .attr("text-anchor","middle")
+                // .attr("transform","translate(0,"+p+")")
+                // .attr("opacity",0)
+                // .style("font-size","9px")
+
+
+                // ageChart.selectAll(".tenureBar")
+                // .data(averages)
+                // .enter()
+                // .append("rect")
+                // .attr("fill", function(d){return tenureColor(d.averageTenure)})
+                // .attr("x",function(d){return xScale(new Date(String(d.year)))})
+                // .attr("y",function(d,i){return ageScale(d.averageTenure)})   
+                // .attr("width",barWidth*2)
                 // .attr("height",function(d,i){return 600-ageScale(d.averageTenure)})   
-                // .attr("r",2)
-                .text(function(d){
-                    return Math.round(d.averageAge)
-                })
-                .attr("text-anchor","middle")
-                .attr("transform","translate(0,"+p+")")
-                .attr("opacity",0)
-                .style("font-size","9px")
+                // .attr("transform","translate(0,"+p+")")
+                // .attr("opacity",1)
+                // .attr("cursor","pointer")
+                // .on("mouseover",function(e,d){
+                //     d3.select("#_tenure_"+d.year).attr("opacity",1)
+                // })
+                // .on("mouseout",function(e,d){
+                //     d3.select("#_tenure_"+d.year).attr("opacity",0)
+                // })
 
-
-                ageChart.selectAll(".tenureBar")
-                .data(averages)
-                .enter()
-                .append("rect")
-                .attr("fill", function(d){return tenureColor(d.averageTenure)})
-                .attr("stroke-width", 1.5)
-                .attr("x",function(d){return xScale(new Date(String(d.year)))})
-                .attr("y",function(d,i){return ageScale(d.averageTenure)})   
-                .attr("width",barWidth)
-                .attr("height",function(d,i){return 600-ageScale(d.averageTenure)})   
-                .attr("r",2)
-                .attr("transform","translate(0,"+p+")")
-                .attr("opacity",1)
-                .attr("cursor","pointer")
-                .on("mouseover",function(e,d){
-                    d3.select("#_tenure_"+d.year).attr("opacity",1)
-                })
-                .on("mouseout",function(e,d){
-                    d3.select("#_tenure_"+d.year).attr("opacity",0)
-                })
-
-                ageChart.selectAll(".tenureBar")
-                .data(averages)
-                .enter()
-                .append("text")
-                .attr("fill", "#007194")
-                .attr("stroke-width", 1.5)
-                .attr("id",function(d){
-                    return "_tenure_"+d.year
-                })
-                .attr("x",function(d){return xScale(new Date(String(d.year)))+5})
-                .attr("y",function(d,i){return ageScale(d.averageTenure)-2})   
-                // .attr("width",20)
-                // .attr("height",function(d,i){return 600-ageScale(d.averageTenure)})   
-                // .attr("r",2)
-                .text(function(d){
-                    return Math.round(d.averageTenure)
-                })
-                .attr("text-anchor","middle")
-                .attr("transform","translate(0,"+p+")")
-                .attr("opacity",0)
-                .style("font-size","10px")
+                // ageChart.selectAll(".tenureBar")
+                // .data(averages)
+                // .enter()
+                // .append("text")
+                // .attr("fill", "#007194")
+                // .attr("id",function(d){
+                //     return "_tenure_"+d.year
+                // })
+                // .attr("x",function(d){return xScale(new Date(String(d.year)))+5})
+                // .attr("y",function(d,i){return ageScale(d.averageTenure)-2})   
+                // // .attr("width",20)
+                // // .attr("height",function(d,i){return 600-ageScale(d.averageTenure)})   
+                // // .attr("r",2)
+                // .text(function(d){
+                //     return Math.round(d.averageTenure)
+                // })
+                // .attr("text-anchor","middle")
+                // .attr("transform","translate(0,"+p+")")
+                // .attr("opacity",0)
+                // .style("font-size","10px")
                 
 
                 //  var tenureScale = d3.scaleLinear().domain([0,30]).range([p,0])
@@ -564,10 +551,45 @@ function drawActive(active,svg){
                 }
                 return  ageScale(d.ageAtEnd)
             })
-            .attr("stroke","black")
-            //.attr("stroke-width",function(d){return widthScale(d.days)})
-            .attr("stroke-width",2)
+            .attr("stroke",function(d){
+                return "black"
+            })
+            .style("cursor","pointer")
+            .attr("stroke-width",5)
+            .on("mouseover",function(e,d){
+                       d3.select("#tooltip")
+                       .html("<b>"+d.name+"</b><br>start date: "+d.start+"<br>years served: "+Math.round(d.days/365*10)/10
+                       +"<br> age at start: "+Math.round(d.ageAtStart)
+                       +"<br> age at end: "+Math.round(d.ageAtEnd)
+                    )
+                       .style("left", e.offsetX+30+ "px")
+                       .style("top", e.offsetY+30 + "px")
+                       .style("visibility","visible")
 
+                       var thisId = d3.select(this).attr("id")
+                       d3.selectAll(this).attr("stroke",highlightColor)
+                       
+                    })
+                    .on("mouseout",function(){
+                        d3.select("#tooltip").html("")
+                        .style("visibility","hidden")
+
+                        var thisId = d3.select(this).attr("id")
+                        d3.selectAll("#"+thisId).attr("fill",color)
+                    })
+            // termBars.selectAll("circle")
+            // .data(barData)
+            //  .enter()
+            //  .append("circle")
+            //  .attr("r",2)
+            // .attr("cx",  function(d){return  xScale(new Date(d.end))})
+            // .attr("cy", function(d){
+            //     if (Object.keys(offsets).indexOf(d.name)>-1){
+            //        //console.log(d.name,offsets[d.name])
+            //         return  ageScale(d.ageAtEnd)-offsets[d.name]
+            //     }
+            //     return  ageScale(d.ageAtEnd)
+            // })
 
             var xAxis = d3.axisBottom().scale(xScale).tickFormat(function(d){return new Date(d).getFullYear();})
             .tickValues([ new Date("1,1,1790"),new Date("1,1,1800"),new Date("1,1,1825"),new Date("1,1,1850"),new Date("1,1,1875"),
